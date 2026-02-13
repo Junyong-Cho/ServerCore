@@ -1,57 +1,57 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 
-internal class ClientListener
+class ClientListener
 {
-    Socket _listenSocket;
-    SocketAsyncEventArgs _acceptArgs;
+    Socket? _listenSocket;
+    Func<Session>? _sessionFactory;
 
-    Func<Session> _sessionFactory;
-
-    public void Init(EndPoint endPoint, Func<Session> sessionFactory)
+    public void Init(EndPoint localEndPoint, Func<Session> sessionFactory, int argsCount = 10, int listenCount = 1000)
     {
-        _listenSocket = new(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+        _listenSocket = new(localEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+
+        _listenSocket.Bind(localEndPoint);
+        _listenSocket.Listen(listenCount);
 
         _sessionFactory = sessionFactory;
 
-        _listenSocket.Bind(endPoint);
-        _listenSocket.Listen(10);
+        Console.WriteLine($"server Opened at {localEndPoint}");
 
-        _acceptArgs.Completed += OnAcceptCompleted;
+        for (int i = 0; i < argsCount; i++)
+        {
+            SocketAsyncEventArgs args = new();
 
-        
+            args.Completed += OnAcceptComplete;
+
+            RegisterAccept(args);
+        }
     }
 
-    void RegisterAccept()
+    void RegisterAccept(SocketAsyncEventArgs accpArgs)
     {
+        accpArgs.AcceptSocket = null;
+
         try
         {
-            bool accept = _listenSocket.AcceptAsync(_acceptArgs);
+            bool pending = _listenSocket.AcceptAsync(accpArgs);
 
-            if (accept == false)
-            {
-                OnAcceptCompleted(null, _acceptArgs);
-            }
+            if (pending == false)
+                OnAcceptComplete(null, accpArgs);
         }
         catch(Exception e)
         {
+            Console.WriteLine("RegisterAccept Error");
             Console.WriteLine(e);
         }
     }
 
-    void OnAcceptCompleted(object? obj, SocketAsyncEventArgs args)
+    void OnAcceptComplete(object? obj, SocketAsyncEventArgs accpArgs)
     {
-        if (args.SocketError == SocketError.Success)
+        if (accpArgs.SocketError == SocketError.Success)
         {
-            Socket client = args.AcceptSocket!;
-
-            args.AcceptSocket = null;
-            
-            // client 처리
+            _sessionFactory?.Invoke().Start(accpArgs.AcceptSocket!);
         }
 
-
-
-        RegisterAccept();
+        RegisterAccept(accpArgs);
     }
 }

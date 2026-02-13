@@ -1,13 +1,22 @@
-﻿using System.Buffers;
-using System.Net;
+﻿using System.Net;
 using System.Text;
 
-internal class GameSession : Session
+internal class TestSession : Session
 {
     protected override void OnConnected(EndPoint endPoint)
     {
         Console.WriteLine($"Connected: {endPoint.ToString()}");
 
+        string data = $"Hello {endPoint.ToString()}";
+        int byteCount = Encoding.UTF8.GetMaxByteCount(data.Length);
+
+        var segment = SendBufferHandler.Open(byteCount);
+
+        byteCount = Encoding.UTF8.GetBytes(data, segment);
+
+        SendBufferHandler.Close(byteCount);
+
+        Send(segment);
     }
 
     protected override void OnDisconnected(EndPoint endPoint)
@@ -21,7 +30,13 @@ internal class GameSession : Session
 
         Console.WriteLine($"[From]: {data}");
 
-        Send(segment);
+        var sendSegment = SendBufferHandler.Open(segment.Count);
+
+        Array.Copy(segment.Array!, segment.Offset, sendSegment.Array!, sendSegment.Offset, segment.Count);
+
+        SendBufferHandler.Close(segment.Count);
+
+        Send(sendSegment);
 
         return segment.Count;
     }

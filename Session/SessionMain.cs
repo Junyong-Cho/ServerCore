@@ -32,14 +32,15 @@ abstract partial class Session
                 return;
             }
 
-            OnConnected(_socket.RemoteEndPoint);
         }
         catch(Exception e)
         {
             Console.WriteLine("Session Start Failed");
             Console.WriteLine(e);
             Disconnect();
+            return;
         }
+        OnConnected(_socket.RemoteEndPoint);
 
         _sendArgs.Completed += OnSendComplete;
         _recvArgs.Completed += OnRecvComplete;

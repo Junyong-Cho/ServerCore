@@ -1,15 +1,19 @@
 ﻿using System.Net;
-using System.Net.Http.Headers;
+using System.Net.Sockets;
 
-string serverIp = "127.0.0.1";
+string hostName = Dns.GetHostName();
+IPAddress address = Dns.GetHostAddresses(hostName)
+    .FirstOrDefault(addr => addr.AddressFamily == AddressFamily.InterNetwork &&
+    addr != IPAddress.Loopback)!;
 int port = 8080;
 
 ClientListener listener = new();
 
-listener.Init(new IPEndPoint(IPAddress.Parse(serverIp), port), () => new GameSession());
+listener.Init(new IPEndPoint(address, port), () => new TestSession());
 
 while (true)
 {
+    Console.Write(">> ");
     string ord = Console.ReadLine()!;
 
     if (ord == "exit")
