@@ -23,7 +23,7 @@
         if (FreeSize < usedSize)
             return null;
 
-        ArraySegment<byte> segment = new(_buffer, _usedSize, usedSize);
+        var segment = Open(usedSize);
         _usedSize += usedSize;
 
         return segment;

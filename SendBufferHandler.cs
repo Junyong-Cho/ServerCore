@@ -1,8 +1,7 @@
-﻿internal static class SendBufferHandler
+﻿public static class SendBufferHandler
 {
-
     static ThreadLocal<SendBuffer> CurrentBuffer = new();
-
+    
     public static ArraySegment<byte> Open(int reserveSize)
     {
         if (CurrentBuffer.Value == null)

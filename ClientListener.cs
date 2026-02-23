@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 
-class ClientListener
+internal class ClientListener
 {
     Socket? _listenSocket;
     Func<Session>? _sessionFactory;
@@ -33,7 +33,7 @@ class ClientListener
 
         try
         {
-            bool pending = _listenSocket.AcceptAsync(accpArgs);
+            bool pending = _listenSocket!.AcceptAsync(accpArgs);
 
             if (pending == false)
                 OnAcceptComplete(null, accpArgs);
