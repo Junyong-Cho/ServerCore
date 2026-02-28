@@ -6,6 +6,7 @@ namespace ServerCore.Sessions;
 public abstract partial class Session 
 {
     volatile int _disconnected = 0;
+    volatile int _refCount = 1;
 
     public int Disconnected => _disconnected;
 
@@ -21,6 +22,8 @@ public abstract partial class Session
 
     protected List<ArraySegment<byte>> _sendingList;
     protected List<ArraySegment<byte>> _pendingList;
+
+    protected static LingerOption closeOption = new(true, 0);
 
     protected abstract void OnSend(int numOfBytes);
     protected abstract int OnRecv(ArraySegment<byte> segment);
@@ -54,21 +57,48 @@ public abstract partial class Session
         if (Interlocked.Exchange(ref _disconnected, 1) == 1)
             return;
 
-        if (_socket == null)
-            return;
-
         try
         {
-            _socket.Shutdown(SocketShutdown.Both);
+            _socket!.LingerState = closeOption;
             _socket.Close();
-            OnDisconnect();
         }
         catch { }
+
+        _socket = null;
+        Release();
+    }
+
+    protected virtual void LogExceptionAndDisconnect(object log)
+    {
+        Console.WriteLine(log);
+        Disconnect();
+        Release();
+    }
+
+    protected virtual void Release()
+    {
+        if (Interlocked.Decrement(ref _refCount) == 0)
+        {
+            OnDisconnect();
+            return;
+        }
+    }
+
+    protected virtual void Release(Action RegisterCall)
+    {
+        if (Interlocked.Decrement(ref _refCount) == 0)
+        {
+            OnDisconnect();
+            return;
+        }
+
+        RegisterCall();
     }
 
     public virtual void Reset()
     {
         _disconnected = 0;
+        _refCount = 1;
         _isSending = false;
         _recvBuffer.Reset();
         _sendingList.Clear();

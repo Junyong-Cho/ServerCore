@@ -9,6 +9,8 @@ partial class Session
         if (_disconnected == 1)
             return;
 
+        Interlocked.Increment(ref _refCount);
+
         if (_recvBuffer.FreeSize < 1024)
             _recvBuffer.Clean();
 
@@ -21,13 +23,11 @@ partial class Session
             bool pending = _socket!.ReceiveAsync(_recvArgs);
 
             if (pending == false)
-                OnRecvComplete(null, _recvArgs);
+                OnRecvComplete(_socket, _recvArgs);
         }
         catch(Exception e)
         {
-            Console.WriteLine($"UnExpected RegisterRecv Error : {_socket!.RemoteEndPoint}");
-            Console.WriteLine(e);
-            Disconnect();
+            LogExceptionAndDisconnect(e);
             return;
         }
     }
@@ -36,8 +36,7 @@ partial class Session
     {
         if (recvArgs.SocketError != SocketError.Success)
         {
-            Console.WriteLine($"{recvArgs.SocketError} of {_socket!.RemoteEndPoint}");
-            Disconnect();
+            LogExceptionAndDisconnect(recvArgs.SocketError);
             return;
         }
 
@@ -45,15 +44,13 @@ partial class Session
 
         if (byteTransferred <= 0)
         {
-            Console.WriteLine($"Zero Bytes Received : {_socket!.RemoteEndPoint}");
-            Disconnect();
+            LogExceptionAndDisconnect("ZeroByte Transferred");
             return;
         }
 
         if (_recvBuffer.OnWrite(byteTransferred) == false)
         {
-            Console.WriteLine($"UnExpected Error on RecvBuffer Writing : {_socket!.RemoteEndPoint}");
-            Disconnect();
+            LogExceptionAndDisconnect("UnExpected Error on RecvBuffer Writing");
             return;
         }
 
@@ -61,18 +58,16 @@ partial class Session
 
         if (len < 0)
         {
-            Console.WriteLine($"RecvSession Packet Processing Error : {_socket!.RemoteEndPoint}");
-            Disconnect();
+            LogExceptionAndDisconnect($"RecvSession Packet Processing Error");
             return;
         }
 
         if (_recvBuffer.OnRead(len) == false)
         {
-            Console.WriteLine($"UnExpected Error on RecvBuffer Reading: {_socket!.RemoteEndPoint}");
-            Disconnect();
+            LogExceptionAndDisconnect("UnExpected Error on RecvBuffer Reading");
             return;
         }
 
-        RegisterRecv();
+        Release(RegisterRecv);
     }
 }

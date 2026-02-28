@@ -43,6 +43,8 @@ partial class Session
         if (_disconnected == 1)
             return;
 
+        Interlocked.Increment(ref _refCount);
+
         _sendArgs.BufferList = _pendingList;
 
         try
@@ -50,13 +52,11 @@ partial class Session
             bool pending = _socket!.SendAsync(_sendArgs);
 
             if (pending == false)
-                OnSendComplete(null, _sendArgs);
+                OnSendComplete(_socket, _sendArgs);
         }
         catch(Exception e)
         {
-            Console.WriteLine($"UnExpected RegisterSend Error : {_socket!.RemoteEndPoint}");
-            Console.WriteLine(e);
-            Disconnect();
+            LogExceptionAndDisconnect(e);
         }
     }
 
@@ -64,8 +64,7 @@ partial class Session
     {
         if (sendArgs.SocketError != SocketError.Success)
         {
-            Console.WriteLine($"{sendArgs.SocketError} : {_socket!.RemoteEndPoint}");
-            Disconnect();
+            LogExceptionAndDisconnect(sendArgs.SocketError);
             return;
         }
 
@@ -73,8 +72,7 @@ partial class Session
 
         if (byteTransferred <= 0)
         {
-            Console.WriteLine($"Zero Byte Sended");
-            Disconnect();
+            LogExceptionAndDisconnect($"Zero Byte Sended");
             return;
         }
 
@@ -94,6 +92,6 @@ partial class Session
             (_sendingList, _pendingList) = (_pendingList, _sendingList);
         }
 
-        RegisterSend();
+        Release(RegisterSend);
     }
 }
