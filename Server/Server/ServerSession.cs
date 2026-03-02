@@ -1,13 +1,33 @@
 ﻿using ServerCore.Buffers;
 using ServerCore.Sessions;
+using System.Collections.Concurrent;
 using System.Text;
 
 namespace Server;
 
 internal class ServerSession : Session
 {
+    static ServerSession?[] globalSession = new ServerSession[10000]; // 동접자 1만
+    static ConcurrentStack<int> sessionIdxManager = new(Enumerable.Range(0, 10000));
+
+    int sessionIdx;
+
     protected override void OnConnect()
     {
+        if(sessionIdxManager.TryPop(out int idx))
+        {
+            sessionIdx = idx;
+
+            globalSession[sessionIdx] = this;
+        }
+        else
+        {
+            sessionIdx = -1;
+            Console.WriteLine("User Over");
+            Disconnect();
+            return;
+        }
+
         Console.WriteLine($"Connected User : {_socket!.RemoteEndPoint}");
         string msg = $"Hello client {_socket.RemoteEndPoint}";
 
@@ -22,6 +42,14 @@ internal class ServerSession : Session
     protected override void OnDisconnect()
     {
         SessionPool<ServerSession>.Return(this);
+
+        Console.WriteLine("Disconnected");
+
+        if (sessionIdx == -1)
+            return;
+
+        globalSession[sessionIdx] = null;
+        sessionIdxManager.Push(sessionIdx);
     }
 
     protected override int OnRecv(ArraySegment<byte> segment)
