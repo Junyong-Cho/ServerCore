@@ -4,11 +4,11 @@ namespace ServerCore.Sessions;
 
 public static class SessionPool<S> where S : Session, new()
 {
-    static ConcurrentBag<S> _sessionPool = new();
+    static ConcurrentStack<S> _sessionPool = new();
 
     public static S? Rent()
     {
-        if(_sessionPool.TryTake(out S? session))
+        if(_sessionPool.TryPop(out S? session))
         {
             session.Reset();
             return session;
@@ -19,6 +19,6 @@ public static class SessionPool<S> where S : Session, new()
 
     public static void Return(S session)
     {
-        _sessionPool.Add(session);
+        _sessionPool.Push(session);
     }
 }
