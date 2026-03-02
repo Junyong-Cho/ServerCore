@@ -16,6 +16,8 @@ string? ord;
 
 Console.WriteLine($"Server Open {endPoint}");
 
+//var ConsoleOut = Console.Out;
+
 //Console.SetOut(TextWriter.Null); // 스트레스 테스트시 출력 방지
 
 while (true)
@@ -23,7 +25,5 @@ while (true)
     ord = Console.ReadLine();
 
     if (ord == "exit")
-    {
         return;
-    }
 }
