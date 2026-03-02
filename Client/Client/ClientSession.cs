@@ -12,7 +12,6 @@ internal class ClientSession : Session
 
     protected override void OnDisconnect()
     {
-        Console.WriteLine($"Disconnected {_socket!.RemoteEndPoint}");
     }
 
     protected override int OnRecv(ArraySegment<byte> segment)
