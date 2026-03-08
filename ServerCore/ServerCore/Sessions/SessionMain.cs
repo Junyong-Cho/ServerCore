@@ -7,10 +7,9 @@ public abstract partial class Session
 {
     protected volatile int _disconnected = 0;
     protected volatile int _refCount = 1;
+    protected volatile bool _isSending = false;
 
     public int Disconnected => _disconnected;
-
-    protected bool _isSending = false;
 
     protected object _lock = new();
 
