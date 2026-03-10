@@ -62,7 +62,18 @@ partial class Session
             return;
         }
 
-        int len = OnRecv(_recvBuffer.ReadSegment);
+        int len = 0;
+
+        try
+        {
+            len = OnRecv(_recvBuffer.ReadSegment);
+        }
+        catch(Exception e)
+        {
+            Console.WriteLine("OnRecv Error");
+            LogExceptionAndDisconnectAndRelease(e);
+            return;
+        }
 
         if (len < 0)
         {

@@ -95,7 +95,16 @@ partial class Session
             return;
         }
 
-        OnSend(byteTransferred);
+        try
+        {
+            OnSend(byteTransferred);
+        }
+        catch(Exception e)
+        {
+            Console.WriteLine("OnSend Error");
+            LogExceptionAndDisconnectAndRelease(e);
+            return;
+        }
 
         _pendingList.Clear();
         _sendArgs.BufferList = null;

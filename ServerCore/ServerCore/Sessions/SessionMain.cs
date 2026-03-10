@@ -46,7 +46,16 @@ public abstract partial class Session
     {
         _socket = socket;
 
-        OnConnect();
+        try
+        {
+            OnConnect();
+        }
+        catch(Exception e)
+        {
+            Console.WriteLine("OnConnect Error");
+            LogExceptionAndDisconnectAndRelease(e);
+            return;
+        }
 
         RegisterRecv();
     }
@@ -78,7 +87,15 @@ public abstract partial class Session
     {
         if (Interlocked.Decrement(ref _refCount) == 0)
         {
-            OnDisconnect();
+            try
+            {
+                OnDisconnect();
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine("OnDisconnect Error");
+                Console.WriteLine(e);
+            }
             _socket = null;
         }
     }
