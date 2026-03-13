@@ -7,7 +7,7 @@ public abstract partial class Session
 {
     protected volatile int _disconnected = 0;
     protected volatile int _refCount = 1;
-    protected volatile bool _isSending = false;
+    protected bool _isSending = false;
 
     public int Disconnected => _disconnected;
 
@@ -21,6 +21,7 @@ public abstract partial class Session
 
     protected List<ArraySegment<byte>> _sendingList;
     protected List<ArraySegment<byte>> _pendingList;
+    protected List<ArraySegment<byte>> _remainList;
 
     protected static LingerOption closeOption = new(true, 0);
 
@@ -37,6 +38,7 @@ public abstract partial class Session
 
         _sendingList = new(pendingListSize);
         _pendingList = new(pendingListSize);
+        _remainList = new(pendingListSize);
 
         _recvArgs.Completed += OnRecvComplete;
         _sendArgs.Completed += OnSendComplete;

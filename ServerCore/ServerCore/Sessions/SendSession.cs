@@ -61,12 +61,24 @@ partial class Session
 
                 OnSendComplete(null, _sendArgs);
 
-                if (_pendingList.Count == 0)
+                bool isContinue = true;
+
+                if (_pendingList.Count > 0)
+                    continue;
+
+                lock (_lock)
                 {
-                    lock (_lock)
+                    if (_sendingList.Count > 0)
+                        (_sendingList, _pendingList) = (_pendingList, _sendingList);
+                    else
                     {
                         _isSending = false;
+                        isContinue = false;
                     }
+                }
+
+                if (isContinue == false)
+                {
                     Release();
                     return;
                 }
@@ -106,28 +118,55 @@ partial class Session
             return;
         }
 
-        _pendingList.Clear();
-        _sendArgs.BufferList = null;
-
-        lock (_lock)
+        for (int i = 0; i < _pendingList.Count; i++)
         {
-            if (_sendingList.Count > 0)
-                (_sendingList, _pendingList) = (_pendingList, _sendingList);
+            ArraySegment<byte> seg = _pendingList[i];
+
+            if (byteTransferred < seg.Count)
+            {
+                _remainList.Add(seg.Slice(byteTransferred));
+
+                while (++i < _pendingList.Count)
+                    _remainList.Add(_pendingList[i]);
+
+                break;
+            }
+
+            byteTransferred -= seg.Count;
         }
 
+        _pendingList.Clear();
+
+        if (_remainList.Count > 0)
+            (_pendingList, _remainList) = (_remainList, _pendingList);
+        _sendArgs.BufferList = null;
+        
         if (sender == null)
             return;
 
-        if (_pendingList.Count > 0)
-            RegisterSend();
-        else
+        bool isContinue = true;
+
+        if(_pendingList.Count==0)
         {
             lock (_lock)
             {
-                _isSending = false;
+                if (_sendingList.Count > 0)
+                    (_sendingList, _pendingList) = (_pendingList, _sendingList);
+                else
+                {
+                    _isSending = false;
+                    isContinue = false;
+                }
             }
         }
 
+        if (isContinue == false)
+        {
+            Release();
+            return;
+        }
+
+        RegisterSend();
         Release();
     }
 }
