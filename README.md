@@ -69,7 +69,6 @@ Socket Async Event Args (SAEA) 방식의 네트워크 엔진 라이브러리
 - RegisterSend()
   - 소켓에서 데이터를 수신할 때 이벤트를 발생하도록 등록 
 - 가독성과 유지보수를 위해 SendSession.cs, RecvSession.cs, SessionMain.cs로 나누어짐
-- SocketAsyncEventArgs로 비동기 힙 할당을 최소화하는 고성능 모델
 - _sendingList와 _pendingList 두 개의 리스트 참조를 스왑하며 lock 시간 단축
 
 ### 세션 전송 플로우
@@ -82,7 +81,21 @@ Socket Async Event Args (SAEA) 방식의 네트워크 엔진 라이브러리
 <img width="1648" height="937" alt="Image" src="https://github.com/user-attachments/assets/1224dbeb-8071-4bd7-ab0d-adee059a0176" />
 
 ### SessionPool.cs
-- 연결 종료된 세션을 재사용하기 위한 풀링 클래스
+- 세션 풀링용 정적 클래스
+
+## Listeners
+
+### SocketListener 
+- 추상 클래스
+- abstract void OnStart()
+  - Listener 활성화 시 호출, 로그 출력
+- abstract void Quit(object log)
+  - 서버를 종료할 때 호출할 클래스
+- abstract void OnRegister()
+  - Start가 끝날 때 호출, 로그 출력
+
+- 흐름
+<img width="1656" height="932" alt="Image" src="https://github.com/user-attachments/assets/1416f1eb-6972-44bf-8039-4dfb1567bcdf" />
 
 # 테스트 프로젝트
 
