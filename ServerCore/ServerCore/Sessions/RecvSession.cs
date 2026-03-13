@@ -10,7 +10,7 @@ partial class Session
 
         while (true)
         {
-            if (_disconnected == 1)
+            if (_isDisconnected == 1)
             {
                 Release();
                 return;

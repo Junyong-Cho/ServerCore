@@ -39,12 +39,12 @@ partial class Session
     }
 
     protected virtual void RegisterSend()
-    {
+    {   
         Interlocked.Increment(ref _refCount);
 
         while (true)
         {
-            if (_disconnected == 1)
+            if (_isDisconnected == 1)
             {
                 Release();
                 return;

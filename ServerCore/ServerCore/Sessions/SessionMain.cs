@@ -5,11 +5,12 @@ namespace ServerCore.Sessions;
 
 public abstract partial class Session 
 {
-    protected volatile int _disconnected = 0;
+    protected volatile int _isDisconnected = 0;
     protected volatile int _refCount = 1;
-    protected bool _isSending = false;
+    protected volatile int _isReleased = 0;
+    protected volatile bool _isSending = false;
 
-    public int Disconnected => _disconnected;
+    public int Disconnected => _isDisconnected;
 
     protected object _lock = new();
 
@@ -64,7 +65,7 @@ public abstract partial class Session
 
     public virtual void Disconnect()
     {
-        if (Interlocked.Exchange(ref _disconnected, 1) == 1)
+        if (Interlocked.Exchange(ref _isDisconnected, 1) == 1)
             return;
 
         try
@@ -79,7 +80,7 @@ public abstract partial class Session
 
     protected virtual void LogExceptionAndDisconnectAndRelease(object? log)
     {
-        if (_disconnected == 0 && log !=null)
+        if (_isDisconnected == 0 && log !=null)
             Console.WriteLine(log);
         Disconnect();
         Release();
@@ -87,7 +88,7 @@ public abstract partial class Session
 
     protected virtual void Release()
     {
-        if (Interlocked.Decrement(ref _refCount) == 0)
+        if (Interlocked.Decrement(ref _refCount) == 0 && Interlocked.Exchange(ref _isReleased, 1) == 0)
         {
             try
             {
@@ -103,11 +104,13 @@ public abstract partial class Session
     }
     public virtual void Reset()
     {
-        _disconnected = 0;
+        _isDisconnected = 0;
         _refCount = 1;
+        _isReleased = 0;
         _isSending = false;
         _recvBuffer.Reset();
         _sendingList.Clear();
         _pendingList.Clear();
+        _remainList.Clear();
     }
 }
