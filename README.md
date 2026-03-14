@@ -64,8 +64,8 @@ Socket Async Event Args (SAEA) 방식의 네트워크 엔진 라이브러리
   - 세션 종료시 호출되어 마무리 및 세션 풀 반납 등 구현
 - abstract int OnRecv(ArraySegment<byte> segment)
   - Recieve 이벤트 발생시 전송받은 패킷을 처리하고 처리한 사이즈 반환 (이후 RecvBuffer의 OnRead 호출)
-- ~bstract int OnSend(int numOfBytes) (미구현)~
-  - 추후 SendBuffer의 refCount 구현을 위한 메서드
+- abstract int OnSend(int numOfBytes)
+  - 전송한 바이트 카운트를 모니터링하는 메서드
 - RegisterSend()
   - 소켓에서 데이터를 수신할 때 이벤트를 발생하도록 등록 
 - 가독성과 유지보수를 위해 SendSession.cs, RecvSession.cs, SessionMain.cs로 나누어짐
