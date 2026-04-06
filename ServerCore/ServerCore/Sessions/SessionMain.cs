@@ -1,4 +1,5 @@
 ﻿using ServerCore.Buffers;
+using System.Net;
 using System.Net.Sockets;
 
 namespace ServerCore.Sessions;
@@ -26,10 +27,12 @@ public abstract partial class Session
 
     protected static LingerOption closeOption = new(true, 0);
 
+    protected EndPoint? _remote;
     protected abstract void OnSend(int numOfBytes);
     protected abstract int OnRecv(ArraySegment<byte> segment);
     protected abstract void OnConnect();
     protected abstract void OnDisconnect();
+
 
     public Session(int recvBufferSize = 1<<16, int sendBufferSize = 1<<16, int pendingListSize = 100)
     {
@@ -51,6 +54,7 @@ public abstract partial class Session
 
         try
         {
+            _remote = _socket.RemoteEndPoint!;
             OnConnect();
         }
         catch(Exception e)
@@ -72,6 +76,7 @@ public abstract partial class Session
         {
             _socket!.LingerState = closeOption;
             _socket.Close();
+            _remote = null;
         }
         catch { }
         

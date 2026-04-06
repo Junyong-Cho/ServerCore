@@ -6,6 +6,9 @@ partial class Session
 {
     public virtual void Send(ArraySegment<byte> buffer)
     {
+        if (buffer.Count == 0)
+            return;
+        
         lock (_lock)
         {
             _sendingList.Add(buffer);
@@ -95,21 +98,21 @@ partial class Session
     {
         if (sendArgs.SocketError != SocketError.Success)
         {
-            LogExceptionAndDisconnectAndRelease(sendArgs.SocketError);
+            LogExceptionAndDisconnectAndRelease($"OnSendComplete : {sendArgs.SocketError}");
             return;
         }
 
-        int byteTransferred = sendArgs.BytesTransferred;
+        int bytesTransferred = sendArgs.BytesTransferred;
 
-        if (byteTransferred <= 0)
+        if (bytesTransferred <= 0)
         {
-            LogExceptionAndDisconnectAndRelease(null);
+            LogExceptionAndDisconnectAndRelease($"OnSendComplete BytesTransferred {bytesTransferred}\n pendingList Count : {_pendingList.Count}");
             return;
         }
 
         try
         {
-            OnSend(byteTransferred);
+            OnSend(bytesTransferred);
         }
         catch(Exception e)
         {
@@ -122,9 +125,9 @@ partial class Session
         {
             ArraySegment<byte> seg = _pendingList[i];
 
-            if (byteTransferred < seg.Count)
+            if (bytesTransferred < seg.Count)
             {
-                _remainList.Add(seg.Slice(byteTransferred));
+                _remainList.Add(seg.Slice(bytesTransferred));
 
                 while (++i < _pendingList.Count)
                     _remainList.Add(_pendingList[i]);
@@ -132,7 +135,7 @@ partial class Session
                 break;
             }
 
-            byteTransferred -= seg.Count;
+            bytesTransferred -= seg.Count;
         }
 
         _pendingList.Clear();
@@ -146,7 +149,7 @@ partial class Session
 
         bool isContinue = true;
 
-        if(_pendingList.Count==0)
+        if (_pendingList.Count == 0)
         {
             lock (_lock)
             {

@@ -44,19 +44,19 @@ partial class Session
     {
         if (recvArgs.SocketError != SocketError.Success)
         {
-            LogExceptionAndDisconnectAndRelease(recvArgs.SocketError);
+            LogExceptionAndDisconnectAndRelease($"OnRecvComplete : {recvArgs.SocketError}");
             return;
         }
 
-        int byteTransferred = recvArgs.BytesTransferred;
+        int bytesTransferred = recvArgs.BytesTransferred;
 
-        if (byteTransferred <= 0)
+        if (bytesTransferred <= 0)
         {
-            LogExceptionAndDisconnectAndRelease(null);
+            LogExceptionAndDisconnectAndRelease($"OnRecvComplete BytesTransferred {bytesTransferred}");
             return;
         }
 
-        if (_recvBuffer.OnWrite(byteTransferred) == false)
+        if (_recvBuffer.OnWrite(bytesTransferred) == false)
         {
             LogExceptionAndDisconnectAndRelease("UnExpected Error on RecvBuffer Writing");
             return;
