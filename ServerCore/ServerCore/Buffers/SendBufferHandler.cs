@@ -2,37 +2,33 @@
 
 public static class SendBufferHandler
 {
-    static ThreadLocal<SendBuffer?> _current = new(() => null);
+    static ThreadLocal<SendBuffer?> _current = new(() => SendBufferPool.Rent(BufferSize));
 
     public static int BufferSize { get; set; } = 1 << 16;
+
     public static ArraySegment<byte> Open(int reserveSize)
     {
-        if (_current.Value == null)
-            _current.Value = new(BufferSize);
+        SendBuffer buffer = _current.Value!;
 
-        var segment = _current.Value.Open(reserveSize);
-
-        if (segment == null)
+        if (buffer.FreeSize < reserveSize)
         {
             if (BufferSize < reserveSize)
-                throw new Exception("SendBuffer Open BufferOverFlow");
-            _current.Value = new(BufferSize);
+                throw new Exception("ReserveSize Over Than BufferSize");
 
-            segment = _current.Value.Open(reserveSize);
+            buffer.Dispose();
+            _current.Value = buffer = SendBufferPool.Rent(BufferSize);
         }
 
-        return segment!.Value;
+        return buffer.Open(reserveSize);
     }
 
-    public static ArraySegment<byte> Close(int usedSize)
+    public static SendBufferWrapper Close(int usedSize)
     {
-        if (_current.Value == null)
-            throw new Exception("Try Close Null Buffer Exception");
+        SendBuffer buffer = _current.Value!;
 
-        var segment = _current.Value.Close(usedSize);
+        if (buffer.FreeSize < usedSize)
+            throw new Exception("Need Open Before Close");
 
-        if (segment == null)
-            throw new Exception("UnUsed Segment Close Exception");
-        return segment.Value;
+        return new(buffer, buffer.Close(usedSize));
     }
 }

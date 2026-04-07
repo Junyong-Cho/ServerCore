@@ -1,4 +1,5 @@
 ﻿using ServerCore.Buffers;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 
@@ -21,9 +22,11 @@ public abstract partial class Session
     protected SocketAsyncEventArgs _recvArgs = new();
     protected SocketAsyncEventArgs _sendArgs = new();
 
-    protected List<ArraySegment<byte>> _sendingList;
-    protected List<ArraySegment<byte>> _pendingList;
-    protected List<ArraySegment<byte>> _remainList;
+    protected SessionList<ArraySegment<byte>> _sendingList;
+    protected SessionList<ArraySegment<byte>> _pendingList;
+    protected SessionList<ArraySegment<byte>> _remainList;
+
+    protected Queue<SendBuffer> _refBufferQueue;
 
     protected static LingerOption closeOption = new(true, 0);
 
@@ -43,6 +46,7 @@ public abstract partial class Session
         _sendingList = new(pendingListSize);
         _pendingList = new(pendingListSize);
         _remainList = new(pendingListSize);
+        _refBufferQueue = new();
 
         _recvArgs.Completed += OnRecvComplete;
         _sendArgs.Completed += OnSendComplete;
@@ -97,6 +101,8 @@ public abstract partial class Session
         {
             try
             {
+                while (_refBufferQueue.Count > 0)
+                    _refBufferQueue.Dequeue().DecreaseReference();
                 OnDisconnect();
             }
             catch(Exception e)

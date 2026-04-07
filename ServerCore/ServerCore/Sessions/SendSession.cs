@@ -1,45 +1,68 @@
-﻿using System.Net.Sockets;
+﻿using ServerCore.Buffers;
+using System.Net.Sockets;
 
 namespace ServerCore.Sessions;
 
 partial class Session
 {
-    public virtual void Send(ArraySegment<byte> buffer)
+    public virtual void Send(SendBufferWrapper wrapper)
     {
-        if (buffer.Count == 0)
+        if (wrapper.Segment.Count == 0)
             return;
+
+        wrapper.Buffer.IncreaseReference();
+
+        lock (_lock)
+        {
+            _sendingList.Add(wrapper.Segment);
+            _refBufferQueue.Enqueue(wrapper.Buffer);
+
+            if (_isSending == true)
+                return;
+
+            _isSending = true;
+            (_sendingList, _pendingList) = (_pendingList, _sendingList);
+        }
+
+        RegisterSend();
+    }
+
+    //public virtual void Send(ArraySegment<byte> buffer)
+    //{
+    //    if (buffer.Count == 0)
+    //        return;
         
-        lock (_lock)
-        {
-            _sendingList.Add(buffer);
+    //    lock (_lock)
+    //    {
+    //        _sendingList.Add(buffer);
 
-            if (_isSending == true)
-                return;
+    //        if (_isSending == true)
+    //            return;
 
-            _isSending = true;
+    //        _isSending = true;
 
-            (_sendingList, _pendingList) = (_pendingList, _sendingList);
-        }
+    //        (_sendingList, _pendingList) = (_pendingList, _sendingList);
+    //    }
 
-        RegisterSend();
-    }
+    //    RegisterSend();
+    //}
 
-    public virtual void Send(IList<ArraySegment<byte>> buffers)
-    {
-        lock (_lock)
-        {
-            _sendingList.AddRange(buffers);
+    //public virtual void Send(IList<ArraySegment<byte>> buffers)
+    //{
+    //    lock (_lock)
+    //    {
+    //        _sendingList.AddRange(buffers);
 
-            if (_isSending == true)
-                return;
+    //        if (_isSending == true)
+    //            return;
 
-            _isSending = true;
+    //        _isSending = true;
 
-            (_sendingList, _pendingList) = (_pendingList, _sendingList);
-        }
+    //        (_sendingList, _pendingList) = (_pendingList, _sendingList);
+    //    }
 
-        RegisterSend();
-    }
+    //    RegisterSend();
+    //}
 
     protected virtual void RegisterSend()
     {   
@@ -135,6 +158,7 @@ partial class Session
                 break;
             }
 
+            _refBufferQueue.Dequeue().DecreaseReference();
             bytesTransferred -= seg.Count;
         }
 
@@ -163,13 +187,9 @@ partial class Session
             }
         }
 
-        if (isContinue == false)
-        {
-            Release();
-            return;
-        }
+        if (isContinue == true)
+            RegisterSend();
 
-        RegisterSend();
         Release();
     }
 }
