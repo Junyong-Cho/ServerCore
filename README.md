@@ -33,26 +33,30 @@ Socket Async Event Args (SAEA) 방식의 네트워크 엔진 라이브러리
 - int FreeSize : 버퍼의 남은 사이즈
 - ArraySegment<byte>? Open(int reserveSize) :
   - 전송할 패킷을 직렬하기 위해 버퍼에서 특정 크기만큼 예약
-  - FreeSize보다 예약한 크기가 클 경우 null 반환
 - ArraySegment<byte>? Close(int usedCount) :
   - 직렬화한 크기만큼 버퍼 슬라이싱 및 반환, UsedSize 포인터 이동
-  - FreeSize보다 사용한 크기가 클 경우 null 반환
-
-**추후 ArrayPool과 reference count로 힙 할당 최소화 예정**
 
 ### SendBufferHandler.cs
 <img width="1602" height="383" alt="Image" src="https://github.com/user-attachments/assets/660bd5ce-6cd3-4e2e-a29e-834826b3f3b3" />
 
 - SendBuffer를 다루는 정적 클래스
 - ThreadLocal<SendBuffer>
-  - 세션에서 버퍼를 전송할 때 랜덤한 쓰레드에서 전송하게 됨
+  - 세션에서 패킷을 전송할 때 랜덤한 쓰레드에서 전송하게 됨
   - 각 쓰레드별로 별도의 SendBuffer를 가지도록 하여 버퍼 안정화
 - ArraySegment<byte> Open(int reserveSize)
-  - SendBuffer의 Open 호출 및 반환, null 반환 시 새로운 SendBuffer 생성
+  - SendBuffer의 Open 호출 및 반환
+  - 현재 SendBuffer의 FreeSize보다 크면 SendBuffer 반납 및 새로운 SendBuffer 대여
   - SendBuffer의 버퍼사이즈보다 큰 크기로 예약시 예외 발생
-- ArraySegment<byte> Close(int usedSize)
-  - SendBuffer의 Close 호출 및 반환
-  - null 반환 시 예외 발생 (Open 후 Close 강제)
+- SendBufferWrapper Close(int usedSize)
+  - SendBuffer의 Close 호출 -> SendBufferWrapper로 감싼 후 반환
+  - 현재 SendBuffer의 FreeSize보다 크면 예외 발생(Open 후 Close 강제)
+
+### SendBufferWrapper
+- SendBuffer와 ArraySegment<byte>를 담고 있는 구조체
+- Session에서 패킷을 전송할 때 패킷이 어떤 버퍼에서 작성되었는지 확인함으로써 SendBuffer 풀링 가능
+
+### SendBufferPool
+- SendBuffer 풀링용 정적 클래스
 
 ## Sessions
 
@@ -70,6 +74,12 @@ Socket Async Event Args (SAEA) 방식의 네트워크 엔진 라이브러리
   - 소켓에서 데이터를 수신할 때 이벤트를 발생하도록 등록 
 - 가독성과 유지보수를 위해 SendSession.cs, RecvSession.cs, SessionMain.cs로 나누어짐
 - _sendingList와 _pendingList 두 개의 리스트 참조를 스왑하며 lock 시간 단축
+
+### SessionList
+- ArraySegment가 구조체임에도 참조 값을 가지고 있어 List<ArraySegment<byte>> 의 Clear를 수행할 때 O(N)의 시간이 걸리는 문제가 있음
+- ArraySegment가 참조하는 배열은 풀링하여 관리하므로 리스트가 Clear될 때 참조를 해제할 필요가 없음
+- Clear에서 포인터만 0으로 이동하도록 수정
+- this[index], Clear, Count, Add 정도만 구현
 
 ### 세션 전송 플로우
 
