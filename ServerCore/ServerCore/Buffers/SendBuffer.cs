@@ -1,6 +1,4 @@
-﻿using System.Buffers;
-
-namespace ServerCore.Buffers;
+﻿namespace ServerCore.Buffers;
 
 public class SendBuffer
 {

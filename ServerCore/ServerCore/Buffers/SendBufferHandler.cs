@@ -2,7 +2,7 @@
 
 public static class SendBufferHandler
 {
-    static ThreadLocal<SendBuffer?> _current = new(() => SendBufferPool.Rent(BufferSize));
+    static ThreadLocal<SendBuffer> _current = new(() => SendBufferPool.Rent(BufferSize));
 
     public static int BufferSize { get; set; } = 1 << 16;
 

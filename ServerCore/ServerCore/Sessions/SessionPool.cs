@@ -6,7 +6,7 @@ public static class SessionPool<S> where S : Session, new()
 {
     static ConcurrentStack<S> _sessionPool = new();
 
-    public static S? Rent()
+    public static S Rent()
     {
         if(_sessionPool.TryPop(out S? session))
         {

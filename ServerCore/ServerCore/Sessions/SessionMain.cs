@@ -1,5 +1,4 @@
 ﻿using ServerCore.Buffers;
-using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 
@@ -37,7 +36,7 @@ public abstract partial class Session
     protected abstract void OnDisconnect();
 
 
-    public Session(int recvBufferSize = 1<<16, int sendBufferSize = 1<<16, int pendingListSize = 100)
+    public Session(int recvBufferSize = 1<<16, int sendBufferSize = 1<<16, int pendingListSize = 1024)
     {
         _recvBuffer = new(recvBufferSize);
 
@@ -46,7 +45,7 @@ public abstract partial class Session
         _sendingList = new(pendingListSize);
         _pendingList = new(pendingListSize);
         _remainList = new(pendingListSize);
-        _refBufferQueue = new();
+        _refBufferQueue = new(pendingListSize);
 
         _recvArgs.Completed += OnRecvComplete;
         _sendArgs.Completed += OnSendComplete;
@@ -75,14 +74,6 @@ public abstract partial class Session
     {
         if (Interlocked.Exchange(ref _isDisconnected, 1) == 1)
             return;
-
-        try
-        {
-            _socket!.LingerState = closeOption;
-            _socket.Close();
-            _remote = null;
-        }
-        catch { }
         
         Release();
     }
@@ -99,10 +90,22 @@ public abstract partial class Session
     {
         if (Interlocked.Decrement(ref _refCount) == 0 && Interlocked.Exchange(ref _isReleased, 1) == 0)
         {
+            while (_refBufferQueue.Count > 0)
+                _refBufferQueue.Dequeue().DecreaseReference();
+
             try
             {
-                while (_refBufferQueue.Count > 0)
-                    _refBufferQueue.Dequeue().DecreaseReference();
+                _socket!.LingerState = closeOption;
+                _socket.Close();
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine(e);
+            }
+            _socket = null;
+
+            try
+            {
                 OnDisconnect();
             }
             catch(Exception e)
@@ -110,7 +113,6 @@ public abstract partial class Session
                 Console.WriteLine("OnDisconnect Error");
                 Console.WriteLine(e);
             }
-            _socket = null;
         }
     }
     public virtual void Reset()
@@ -119,6 +121,7 @@ public abstract partial class Session
         _refCount = 1;
         _isReleased = 0;
         _isSending = false;
+        _remote = null;
         _recvBuffer.Reset();
         _sendingList.Clear();
         _pendingList.Clear();
