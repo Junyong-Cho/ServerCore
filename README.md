@@ -17,7 +17,7 @@ Socket Async Event Args (SAEA) 방식의 네트워크 엔진 라이브러리
   - ReadSegment 사이즈
 - int FreeSize
   - WriteSegment 사이즈
-- bool OnRecv(int readSize)
+- bool OnRead(int readSize)
   - ReadSegment에서 처리한 바이트만큼 ReadPos 포인터 이동 (DataSize보다 크면 false)
 - bool OnWrite(int writeSize)
   - WriteSegment에서 처리한 바이트만큼 WritePos 포인터 이동 (FreeSize보다 크면 false)
