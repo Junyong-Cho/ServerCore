@@ -107,25 +107,3 @@ Socket Async Event Args (SAEA) 방식의 네트워크 엔진 라이브러리
 - 흐름
 <img width="1656" height="932" alt="Image" src="https://github.com/user-attachments/assets/1416f1eb-6972-44bf-8039-4dfb1567bcdf" />
 
-# 테스트 프로젝트
-
-## Client
-
-### Program.cs
-- 클라이언트 프로그램 최상위 문
-
-### ClientSession
-- 클라이언트 사이드 Session 클래스 구현
-
-## Server
-
-### Program.cs
-- 서버 프로그램 최상위 문
-
-### ClientListener.cs
-- SocketAsyncEventArgs를 이용한 소켓 리스너
-- 연결 성공시 SessionPool에서 세션 대여
-
-### ServerSession.cs
-- 서버 사이드 Session 클래스 구현
-- OnDisconnect에서 SessionPool에 세션 반납
