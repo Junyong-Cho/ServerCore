@@ -30,7 +30,6 @@ public abstract partial class Session
     protected static LingerOption closeOption = new(true, 0);
 
     protected EndPoint? _remote;
-    protected abstract void OnSend(int numOfBytes);
     protected abstract int OnRecv(ArraySegment<byte> segment);
     protected abstract void OnConnect();
     protected abstract void OnDisconnect();
