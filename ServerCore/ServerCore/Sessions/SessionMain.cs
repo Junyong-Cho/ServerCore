@@ -85,6 +85,11 @@ public abstract partial class Session
         Release();
     }
 
+    protected virtual void Hold()
+    {
+        Interlocked.Increment(ref _refCount);
+    }
+
     protected virtual void Release()
     {
         if (Interlocked.Decrement(ref _refCount) == 0 && Interlocked.Exchange(ref _isReleased, 1) == 0)

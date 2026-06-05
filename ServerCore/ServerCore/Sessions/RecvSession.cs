@@ -6,7 +6,7 @@ partial class Session
 {
     protected virtual void RegisterRecv()
     {
-        Interlocked.Increment(ref _refCount);
+        Hold();
 
         while (true)
         {

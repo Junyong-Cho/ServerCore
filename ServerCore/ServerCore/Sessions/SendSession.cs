@@ -65,8 +65,8 @@ partial class Session
     //}
 
     protected virtual void RegisterSend()
-    {   
-        Interlocked.Increment(ref _refCount);
+    {
+        Hold();
 
         while (true)
         {
@@ -102,7 +102,6 @@ partial class Session
                         {
                             _isSending = false;
                             pending = false;
-                            break;
                         }
                     }
 
