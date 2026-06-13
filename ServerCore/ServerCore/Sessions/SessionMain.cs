@@ -1,4 +1,5 @@
-﻿using ServerCore.Buffers;
+using ServerCore.Buffers;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 
@@ -10,6 +11,11 @@ public abstract partial class Session
     protected volatile int _refCount = 1;
     protected volatile int _isReleased = 0;
     protected volatile bool _isSending = false;
+
+#if DEBUG
+    public volatile int RecvRefCount = 0;
+    public volatile int SendRefCount = 0;
+#endif
 
     public int Disconnected => _isDisconnected;
 
@@ -33,7 +39,6 @@ public abstract partial class Session
     protected abstract int OnRecv(ArraySegment<byte> segment);
     protected abstract void OnConnect();
     protected abstract void OnDisconnect();
-
 
     public Session(int recvBufferSize = 1<<16, int sendBufferSize = 1<<16, int pendingListSize = 1024)
     {
@@ -73,7 +78,16 @@ public abstract partial class Session
     {
         if (Interlocked.Exchange(ref _isDisconnected, 1) == 1)
             return;
-        
+        try
+        {
+            _socket!.LingerState = closeOption;
+            _socket.Close();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+        _socket = null;
         Release();
     }
 
@@ -89,6 +103,19 @@ public abstract partial class Session
     {
         Interlocked.Increment(ref _refCount);
     }
+#if DEBUG
+    protected virtual void Hold(bool isRecv)
+    {
+        if (isRecv == true)
+        {
+            Interlocked.Increment(ref RecvRefCount);
+        }
+        else
+        {
+            Interlocked.Increment(ref SendRefCount);
+        }
+    }
+#endif
 
     protected virtual void Release()
     {
@@ -97,16 +124,16 @@ public abstract partial class Session
             while (_refBufferQueue.Count > 0)
                 _refBufferQueue.Dequeue().DecreaseReference();
 
-            try
-            {
-                _socket!.LingerState = closeOption;
-                _socket.Close();
-            }
-            catch(Exception e)
-            {
-                Console.WriteLine(e);
-            }
-            _socket = null;
+            //try
+            //{
+            //    _socket!.LingerState = closeOption;
+            //    _socket.Close();
+            //}
+            //catch(Exception e)
+            //{
+            //    Console.WriteLine(e);
+            //}
+            //_socket = null;
 
             try
             {
@@ -119,6 +146,19 @@ public abstract partial class Session
             }
         }
     }
+#if DEBUG
+    protected virtual void Release(bool isRecv)
+    {
+        if (isRecv == true)
+        {
+            Interlocked.Decrement(ref RecvRefCount);
+        }
+        else
+        {
+            Interlocked.Decrement(ref SendRefCount);
+        }
+    }
+#endif
     public virtual void Reset()
     {
         _isDisconnected = 0;
@@ -130,5 +170,10 @@ public abstract partial class Session
         _sendingList.Clear();
         _pendingList.Clear();
         _remainList.Clear();
+
+#if DEBUG
+        RecvRefCount = 0;
+        SendRefCount = 0;
+#endif
     }
 }

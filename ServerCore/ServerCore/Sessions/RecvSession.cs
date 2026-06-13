@@ -1,4 +1,4 @@
-﻿using System.Net.Sockets;
+using System.Net.Sockets;
 
 namespace ServerCore.Sessions;
 
@@ -6,12 +6,18 @@ partial class Session
 {
     protected virtual void RegisterRecv()
     {
+#if DEBUG
+        Hold(true);
+#endif
         Hold();
 
         while (true)
         {
             if (_isDisconnected == 1)
             {
+#if DEBUG
+                Release(true);
+#endif
                 Release();
                 return;
             }
@@ -34,6 +40,9 @@ partial class Session
             }
             catch(Exception e)
             {
+#if DEBUG
+                Release(true);
+#endif
                 LogExceptionAndDisconnectAndRelease(e);
                 return;
             }
@@ -44,6 +53,9 @@ partial class Session
     {
         if (recvArgs.SocketError != SocketError.Success)
         {
+#if DEBUG
+            Release(true);
+#endif
             LogExceptionAndDisconnectAndRelease($"OnRecvComplete : {recvArgs.SocketError}");
             return;
         }
@@ -52,12 +64,18 @@ partial class Session
 
         if (bytesTransferred <= 0)
         {
+#if DEBUG
+            Release(true);
+#endif
             LogExceptionAndDisconnectAndRelease($"OnRecvComplete BytesTransferred {bytesTransferred}");
             return;
         }
 
         if (_recvBuffer.OnWrite(bytesTransferred) == false)
         {
+#if DEBUG
+            Release(true);
+#endif
             LogExceptionAndDisconnectAndRelease("UnExpected Error on RecvBuffer Writing");
             return;
         }
@@ -70,6 +88,9 @@ partial class Session
         }
         catch(Exception e)
         {
+#if DEBUG
+            Release(true);
+#endif
             Console.WriteLine("OnRecv Error");
             LogExceptionAndDisconnectAndRelease(e);
             return;
@@ -77,12 +98,18 @@ partial class Session
 
         if (len < 0)
         {
+#if DEBUG
+            Release(true);
+#endif
             LogExceptionAndDisconnectAndRelease($"RecvSession Packet Processing Error");
             return;
         }
 
         if (_recvBuffer.OnRead(len) == false)
         {
+#if DEBUG
+            Release(true);
+#endif
             LogExceptionAndDisconnectAndRelease("UnExpected Error on RecvBuffer Reading");
             return;
         }
@@ -92,6 +119,9 @@ partial class Session
 
         RegisterRecv();
 
+#if DEBUG
+        Release(true);
+#endif
         Release();
     }
 }

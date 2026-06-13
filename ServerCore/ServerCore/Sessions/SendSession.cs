@@ -1,4 +1,4 @@
-﻿using ServerCore.Buffers;
+using ServerCore.Buffers;
 using System.Net.Sockets;
 
 namespace ServerCore.Sessions;
@@ -66,12 +66,18 @@ partial class Session
 
     protected virtual void RegisterSend()
     {
+#if DEBUG
+        Hold(false);
+#endif
         Hold();
 
         while (true)
         {
             if (_isDisconnected == 1)
             {
+#if DEBUG
+                Release(false);
+#endif
                 Release();
                 return;
             }
@@ -107,6 +113,9 @@ partial class Session
 
                     if (pending == false)
                     {
+#if DEBUG
+                        Release(false);
+#endif
                         Release();
                         return;
                     }
@@ -114,6 +123,9 @@ partial class Session
             }
             catch(Exception e)
             {
+#if DEBUG
+                Release(false);
+#endif
                 LogExceptionAndDisconnectAndRelease(e);
                 return;
             }
@@ -124,6 +136,9 @@ partial class Session
     {
         if (sendArgs.SocketError != SocketError.Success)
         {
+#if DEBUG
+            Release(false);
+#endif
             LogExceptionAndDisconnectAndRelease($"OnSendComplete : {sendArgs.SocketError}");
             return;
         }
@@ -132,6 +147,9 @@ partial class Session
 
         if (bytesTransferred <= 0)
         {
+#if DEBUG
+            Release(false);
+#endif
             LogExceptionAndDisconnectAndRelease($"OnSendComplete BytesTransferred {bytesTransferred}\n pendingList Count : {_pendingList.Count}");
             return;
         }
@@ -181,6 +199,10 @@ partial class Session
 
         if (pending == true)
             RegisterSend();
+
+#if DEBUG
+        Release(false);
+#endif
         Release();
     }
 }
