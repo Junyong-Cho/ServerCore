@@ -1,5 +1,4 @@
 using ServerCore.Buffers;
-using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 
@@ -17,7 +16,7 @@ public abstract partial class Session
     public volatile int SendRefCount = 0;
 #endif
 
-    public int Disconnected => _isDisconnected;
+    public bool Disconnected => _isDisconnected == 1;
 
     protected object _lock = new();
 
