@@ -31,7 +31,7 @@ partial class Session
     //{
     //    if (buffer.Count == 0)
     //        return;
-        
+
     //    lock (_lock)
     //    {
     //        _sendingList.Add(buffer);
@@ -66,26 +66,21 @@ partial class Session
 
     protected virtual void RegisterSend()
     {
-#if DEBUG
-        Hold(false);
-#endif
         Hold();
 
         while (true)
         {
             if (_isDisconnected == 1)
             {
-#if DEBUG
-                Release(false);
-#endif
                 Release();
                 return;
             }
 
-            _sendArgs.BufferList = _pendingList;
 
             try
             {
+                _sendArgs.BufferList = _pendingList;
+
                 bool pending = _socket!.SendAsync(_sendArgs);
 
                 if (pending == true)
@@ -113,20 +108,15 @@ partial class Session
 
                     if (pending == false)
                     {
-#if DEBUG
-                        Release(false);
-#endif
                         Release();
                         return;
                     }
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-#if DEBUG
-                Release(false);
-#endif
-                LogExceptionAndDisconnectAndRelease(e);
+                LogExceptionAndDisconnect(e);
+                Release();
                 return;
             }
         }
@@ -134,75 +124,78 @@ partial class Session
 
     protected virtual void OnSendComplete(object? sender, SocketAsyncEventArgs sendArgs)
     {
-        if (sendArgs.SocketError != SocketError.Success)
+        try
         {
-#if DEBUG
-            Release(false);
-#endif
-            LogExceptionAndDisconnectAndRelease($"OnSendComplete : {sendArgs.SocketError}");
-            return;
-        }
-
-        int bytesTransferred = sendArgs.BytesTransferred;
-
-        if (bytesTransferred <= 0)
-        {
-#if DEBUG
-            Release(false);
-#endif
-            LogExceptionAndDisconnectAndRelease($"OnSendComplete BytesTransferred {bytesTransferred}\n pendingList Count : {_pendingList.Count}");
-            return;
-        }
-
-        for (int i = 0; i < _pendingList.Count; i++)
-        {
-            ArraySegment<byte> seg = _pendingList[i];
-
-            if (bytesTransferred < seg.Count)
+            if (sendArgs.SocketError != SocketError.Success)
             {
-                _remainList.Add(seg.Slice(bytesTransferred));
-
-                while (++i < _pendingList.Count)
-                    _remainList.Add(_pendingList[i]);
-
-                break;
+                LogExceptionAndDisconnect($"OnSendComplete : {sendArgs.SocketError}");
+                return;
             }
 
-            _refBufferQueue.Dequeue().DecreaseReference();
-            bytesTransferred -= seg.Count;
-        }
+            int bytesTransferred = sendArgs.BytesTransferred;
 
-        _pendingList.Clear();
-
-        if (sender == null)
-            return;
-
-        bool pending = true;
-
-        if (_remainList.Count > 0)
-        {
-            (_pendingList, _remainList) = (_remainList, _pendingList);
-        }
-        else
-        {
-            lock (_lock)
+            if (bytesTransferred <= 0)
             {
-                if (_sendingList.Count > 0)
-                    (_pendingList, _sendingList) = (_sendingList, _pendingList);
+                LogExceptionAndDisconnect($"OnSendComplete BytesTransferred {bytesTransferred}\n pendingList Count : {_pendingList.Count}");
+                return;
+            }
+
+            for (int i = 0; i < _pendingList.Count; i++)
+            {
+                ArraySegment<byte> seg = _pendingList[i];
+
+                if (bytesTransferred < seg.Count)
+                {
+                    _remainList.Add(seg.Slice(bytesTransferred));
+
+                    while (++i < _pendingList.Count)
+                        _remainList.Add(_pendingList[i]);
+
+                    break;
+                }
+
+                if (_refBufferQueue.TryDequeue(out SendBuffer? buffer) == true)
+                    buffer.DecreaseReference();
                 else
                 {
-                    _isSending = false;
-                    pending = false;
+                    LogExceptionAndDisconnect($"RefBufferQueue Error");
+                    return;
+                }
+                bytesTransferred -= seg.Count;
+            }
+
+            _pendingList.Clear();
+
+            if (sender == null)
+                return;
+
+            bool pending = true;
+
+            if (_remainList.Count > 0)
+            {
+                (_pendingList, _remainList) = (_remainList, _pendingList);
+            }
+            else
+            {
+                lock (_lock)
+                {
+                    if (_sendingList.Count > 0)
+                        (_pendingList, _sendingList) = (_sendingList, _pendingList);
+                    else
+                    {
+                        _isSending = false;
+                        pending = false;
+                    }
                 }
             }
+
+            if (pending == true)
+                RegisterSend();
         }
-
-        if (pending == true)
-            RegisterSend();
-
-#if DEBUG
-        Release(false);
-#endif
-        Release();
+        finally
+        {
+            if (sender != null)
+                Release();
+        }
     }
 }

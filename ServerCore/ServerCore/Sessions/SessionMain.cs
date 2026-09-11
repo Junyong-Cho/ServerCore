@@ -1,4 +1,5 @@
 using ServerCore.Buffers;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 
@@ -10,11 +11,6 @@ public abstract partial class Session
     protected volatile int _refCount = 1;
     protected volatile int _isReleased = 0;
     protected volatile bool _isSending = false;
-
-#if DEBUG
-    public volatile int RecvRefCount = 0;
-    public volatile int SendRefCount = 0;
-#endif
 
     public bool Disconnected => _isDisconnected == 1;
 
@@ -30,7 +26,7 @@ public abstract partial class Session
     protected SessionList<ArraySegment<byte>> _pendingList;
     protected SessionList<ArraySegment<byte>> _remainList;
 
-    protected Queue<SendBuffer> _refBufferQueue;
+    protected ConcurrentQueue<SendBuffer> _refBufferQueue;
 
     protected static LingerOption closeOption = new(true, 0);
 
@@ -39,16 +35,14 @@ public abstract partial class Session
     protected abstract void OnConnect();
     protected abstract void OnDisconnect();
 
-    public Session(int recvBufferSize = 1<<16, int sendBufferSize = 1<<16, int pendingListSize = 1024)
+    public Session(int recvBufferSize = 1<<16, int pendingListSize = 1024)
     {
         _recvBuffer = new(recvBufferSize);
-
-        SendBufferHandler.BufferSize = sendBufferSize;
 
         _sendingList = new(pendingListSize);
         _pendingList = new(pendingListSize);
         _remainList = new(pendingListSize);
-        _refBufferQueue = new(pendingListSize);
+        _refBufferQueue = new();
 
         _recvArgs.Completed += OnRecvComplete;
         _sendArgs.Completed += OnSendComplete;
@@ -66,7 +60,7 @@ public abstract partial class Session
         catch(Exception e)
         {
             Console.WriteLine("OnConnect Error");
-            LogExceptionAndDisconnectAndRelease(e);
+            LogExceptionAndDisconnect(e);
             return;
         }
 
@@ -90,38 +84,23 @@ public abstract partial class Session
         Release();
     }
 
-    protected virtual void LogExceptionAndDisconnectAndRelease(object? log)
+    protected virtual void LogExceptionAndDisconnect(object? log)
     {
         if (_isDisconnected == 0 && log !=null)
             Console.WriteLine(log);
         Disconnect();
-        Release();
     }
 
     protected virtual void Hold()
     {
         Interlocked.Increment(ref _refCount);
     }
-#if DEBUG
-    protected virtual void Hold(bool isRecv)
-    {
-        if (isRecv == true)
-        {
-            Interlocked.Increment(ref RecvRefCount);
-        }
-        else
-        {
-            Interlocked.Increment(ref SendRefCount);
-        }
-    }
-#endif
-
     protected virtual void Release()
     {
         if (Interlocked.Decrement(ref _refCount) == 0 && Interlocked.Exchange(ref _isReleased, 1) == 0)
         {
-            while (_refBufferQueue.Count > 0)
-                _refBufferQueue.Dequeue().DecreaseReference();
+            while (_refBufferQueue.TryDequeue(out SendBuffer? buffer) == true)
+                buffer.DecreaseReference();
 
             //try
             //{
@@ -145,19 +124,7 @@ public abstract partial class Session
             }
         }
     }
-#if DEBUG
-    protected virtual void Release(bool isRecv)
-    {
-        if (isRecv == true)
-        {
-            Interlocked.Decrement(ref RecvRefCount);
-        }
-        else
-        {
-            Interlocked.Decrement(ref SendRefCount);
-        }
-    }
-#endif
+
     public virtual void Reset()
     {
         _isDisconnected = 0;
@@ -169,10 +136,5 @@ public abstract partial class Session
         _sendingList.Clear();
         _pendingList.Clear();
         _remainList.Clear();
-
-#if DEBUG
-        RecvRefCount = 0;
-        SendRefCount = 0;
-#endif
     }
 }
