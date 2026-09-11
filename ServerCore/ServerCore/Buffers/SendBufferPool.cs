@@ -5,8 +5,8 @@ namespace ServerCore.Buffers;
 internal static class SendBufferPool
 {
     static internal ConcurrentStack<SendBuffer> _bufferPool = new();
-    
-    internal static SendBuffer Rent(int bufferSize)
+
+    internal static SendBuffer Rent()
     {
         if (_bufferPool.TryPop(out SendBuffer? buffer) == true)
         {
@@ -14,7 +14,7 @@ internal static class SendBufferPool
             return buffer;
         }
 
-        return new(bufferSize);
+        return new();
     }
 
     internal static void Return(SendBuffer buffer)

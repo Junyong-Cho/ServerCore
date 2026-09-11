@@ -2,9 +2,9 @@
 
 public static class SendBufferHandler
 {
-    static ThreadLocal<SendBuffer> _current = new(() => SendBufferPool.Rent(BufferSize));
+    static ThreadLocal<SendBuffer> _current = new(() => SendBufferPool.Rent());
 
-    public static int BufferSize { get; set; } = 1 << 16;
+    public static int BufferSize => SendBuffer.BufferSize;
 
     public static ArraySegment<byte> Open(int reserveSize)
     {
@@ -16,7 +16,7 @@ public static class SendBufferHandler
                 throw new Exception("ReserveSize Over Than BufferSize");
 
             buffer.Dispose();
-            _current.Value = buffer = SendBufferPool.Rent(BufferSize);
+            _current.Value = buffer = SendBufferPool.Rent();
         }
 
         return buffer.Open(reserveSize);

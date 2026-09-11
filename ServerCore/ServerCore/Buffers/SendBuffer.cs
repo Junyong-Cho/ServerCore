@@ -2,6 +2,8 @@
 
 public class SendBuffer
 {
+    public static int BufferSize => 1 << 16;
+
     byte[] _buffer;
 
     int _usedSize;
@@ -10,9 +12,9 @@ public class SendBuffer
     
     public int FreeSize => _buffer.Length - _usedSize;
 
-    public SendBuffer(int bufferSize)
+    public SendBuffer()
     {
-        _buffer = new byte[bufferSize];
+        _buffer = new byte[BufferSize];
         _usedSize = 0;
         _refCount = 1;
         _disposed = 0;
