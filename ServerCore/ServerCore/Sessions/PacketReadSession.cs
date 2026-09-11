@@ -1,5 +1,6 @@
 ﻿namespace ServerCore.Sessions;
 
+[Obsolete]
 abstract class PacketReadSession : Session
 {
     protected ArraySegment<byte>? SlicePacket(ref ArraySegment<byte> segment)

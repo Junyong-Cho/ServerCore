@@ -4,6 +4,7 @@ using ServerCore.Sessions;
 
 namespace ServerCore.Connectors;
 
+[Obsolete]
 public abstract class Connector<S> where S : Session, new()
 {
     EndPoint _endPoint;
