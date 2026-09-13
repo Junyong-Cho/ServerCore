@@ -6,15 +6,20 @@ public static class SessionPool<S> where S : Session, new()
 {
     static ConcurrentStack<S> _sessionPool = new();
 
-    public static S Rent()
+    public static S Rent(Action<S>? sessionInitializer)
     {
-        if(_sessionPool.TryPop(out S? session))
+        if (_sessionPool.TryPop(out S? session))
         {
             session.Reset();
-            return session;
+        }
+        else
+        {
+            session = new();
         }
 
-        return new();
+        sessionInitializer?.Invoke(session);
+
+        return session;
     }
 
     public static void Return(S session)

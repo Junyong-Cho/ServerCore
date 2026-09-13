@@ -9,12 +9,15 @@ public abstract class SocketListener<S> where S : Session, new()
     protected Socket _listener;
     protected int _argsCount;
     protected bool _shutdown = false;
+    protected Action<S>? _sessionInitializer;
 
-    public SocketListener(EndPoint endPoint)
+    public SocketListener(EndPoint endPoint, Action<S>? sessioninitializer = null)
     {
         _listener = new(endPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 
         _listener.Bind(endPoint);
+
+        _sessionInitializer = sessioninitializer;
     }
 
     public abstract void Quit(object log);
@@ -56,7 +59,7 @@ public abstract class SocketListener<S> where S : Session, new()
 
                 OnAccpComplete(null, args);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Quit(e);
                 return;
@@ -68,7 +71,7 @@ public abstract class SocketListener<S> where S : Session, new()
     {
         if (args.SocketError == SocketError.Success)
         {
-            S session = SessionPool<S>.Rent()!;
+            S session = SessionPool<S>.Rent(_sessionInitializer)!;
 
             session.Start(args.AcceptSocket!);
         }
