@@ -8,11 +8,7 @@ public static class SessionPool<S> where S : Session, new()
 
     public static S Rent(Action<S>? sessionInitializer)
     {
-        if (_sessionPool.TryPop(out S? session))
-        {
-            session.Reset();
-        }
-        else
+        if (_sessionPool.TryPop(out S? session) == false)
         {
             session = new();
         }

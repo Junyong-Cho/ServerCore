@@ -50,6 +50,8 @@ public abstract partial class Session
 
     public virtual void Start(Socket socket)
     {
+        Reset();
+
         _socket = socket;
 
         try
@@ -125,7 +127,7 @@ public abstract partial class Session
         }
     }
 
-    public virtual void Reset()
+    protected virtual void Reset()
     {
         _isDisconnected = 0;
         _refCount = 1;
