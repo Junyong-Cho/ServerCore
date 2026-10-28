@@ -37,15 +37,15 @@ public class SendBuffer
     public void Dispose()
     {
         if (Interlocked.Exchange(ref _disposed, 1) == 0)
-            DecreaseReference();
+            Release();
     }
 
-    public void IncreaseReference()
+    public void Hold()
     {
         Interlocked.Increment(ref _refCount);
     }
 
-    public void DecreaseReference()
+    public void Release()
     {
         if (Interlocked.Decrement(ref _refCount) == 0)
         {
