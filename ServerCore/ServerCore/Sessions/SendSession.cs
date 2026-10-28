@@ -1,30 +1,67 @@
 using ServerCore.Buffers;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace ServerCore.Sessions;
 
 partial class Session
 {
+    public virtual void Send(string data)
+    {
+        ArraySegment<byte> segment = SendBufferHandler.Open(Encoding.UTF8.GetMaxByteCount(data.Length));
+
+        int len = Encoding.UTF8.GetBytes(data, segment);
+
+        SendBufferWrapper wrapper = SendBufferHandler.Close(len);
+
+        Send(wrapper);
+    }
+
+    public virtual void Send<S>(S data) where S : struct
+    {
+        int dataSize = Unsafe.SizeOf<S>();
+
+        ArraySegment<byte> segment = SendBufferHandler.Open(dataSize);
+
+        MemoryMarshal.Write(segment, ref data);
+
+        SendBufferWrapper wrapper = SendBufferHandler.Close(dataSize);
+
+        Send(wrapper);
+    }
+
     public virtual void Send(SendBufferWrapper wrapper)
     {
-        if (wrapper.Segment.Count == 0)
+        if (TryHold() == false)
             return;
 
-        wrapper.Buffer.IncreaseReference();
-
-        lock (_lock)
+        try
         {
-            _sendingList.Add(wrapper.Segment);
-            _refBufferQueue.Enqueue(wrapper.Buffer);
-
-            if (_isSending == true)
+            if (wrapper.Segment.Count == 0 || _isDisconnected == 1)
                 return;
 
-            _isSending = true;
-            (_sendingList, _pendingList) = (_pendingList, _sendingList);
-        }
+            wrapper.Buffer.Hold();
 
-        RegisterSend();
+            lock (_lock)
+            {
+                _sendingList.Add(wrapper.Segment);
+                _refBufferQueue.Enqueue(wrapper.Buffer);
+
+                if (_isSending == true)
+                    return;
+
+                _isSending = true;
+                (_sendingList, _pendingList) = (_pendingList, _sendingList);
+            }
+
+            RegisterSend();
+        }
+        finally
+        {
+            Release();
+        }
     }
 
     //public virtual void Send(ArraySegment<byte> buffer)
@@ -66,7 +103,8 @@ partial class Session
 
     protected virtual void RegisterSend()
     {
-        Hold();
+        if (TryHold() == false)
+            return;
 
         while (true)
         {
@@ -155,7 +193,7 @@ partial class Session
                 }
 
                 if (_refBufferQueue.TryDequeue(out SendBuffer? buffer) == true)
-                    buffer.DecreaseReference();
+                    buffer.Release();
                 else
                 {
                     LogExceptionAndDisconnect($"RefBufferQueue Error");
