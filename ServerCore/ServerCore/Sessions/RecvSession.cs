@@ -6,7 +6,8 @@ partial class Session
 {
     protected virtual void RegisterRecv()
     {
-        Hold();
+        if (TryHold() == false)
+            return;
 
         while (true)
         {
