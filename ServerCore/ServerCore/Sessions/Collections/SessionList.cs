@@ -1,6 +1,6 @@
 ﻿using System.Collections;
 
-namespace ServerCore.Sessions;
+namespace ServerCore.Sessions.Collections;
 
 public class SessionList<T> : IList<T> where T : struct
 {

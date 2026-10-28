@@ -1,6 +1,6 @@
 ﻿using System.Collections.Concurrent;
 
-namespace ServerCore.Sessions;
+namespace ServerCore.Sessions.Managements;
 
 public static class SessionPool<S> where S : Session, new()
 {
