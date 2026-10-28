@@ -1,4 +1,5 @@
 using ServerCore.Buffers;
+using ServerCore.Sessions.Collections;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
@@ -11,10 +12,12 @@ public abstract partial class Session
     protected volatile int _refCount = 1;
     protected volatile int _isReleased = 0;
     protected volatile bool _isSending = false;
+    protected volatile int _version = 0;
 
     public bool Disconnected => _isDisconnected == 1;
 
     protected object _lock = new();
+
 
     protected Socket? _socket;
 
@@ -50,14 +53,21 @@ public abstract partial class Session
 
     public virtual void Start(Socket socket)
     {
-        Reset();
+        lock (_lock)
+        {
+            _version++;
+            Reset();
+            _socket = socket;
 
-        _socket = socket;
+            if (TryHold() == false)
+                throw new InvalidOperationException("세션 초기화 작업 실패");
+        }
 
         try
         {
             _remote = _socket.RemoteEndPoint!;
             OnConnect();
+            RegisterRecv();
         }
         catch(Exception e)
         {
@@ -65,11 +75,13 @@ public abstract partial class Session
             LogExceptionAndDisconnect(e);
             return;
         }
-
-        RegisterRecv();
+        finally
+        {
+            Release();
+        }
     }
 
-    public virtual void Disconnect()
+    protected virtual void Disconnect()
     {
         if (Interlocked.Exchange(ref _isDisconnected, 1) == 1)
             return;

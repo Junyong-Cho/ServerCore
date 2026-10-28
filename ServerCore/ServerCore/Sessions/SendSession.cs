@@ -8,7 +8,7 @@ namespace ServerCore.Sessions;
 
 partial class Session
 {
-    public virtual void Send(string data)
+    protected virtual void Send(string data)
     {
         ArraySegment<byte> segment = SendBufferHandler.Open(Encoding.UTF8.GetMaxByteCount(data.Length));
 
@@ -19,7 +19,7 @@ partial class Session
         Send(wrapper);
     }
 
-    public virtual void Send<S>(S data) where S : struct
+    protected virtual void Send<S>(S data) where S : struct
     {
         int dataSize = Unsafe.SizeOf<S>();
 
@@ -32,7 +32,7 @@ partial class Session
         Send(wrapper);
     }
 
-    public virtual void Send(SendBufferWrapper wrapper)
+    protected virtual void Send(SendBufferWrapper wrapper)
     {
         if (TryHold() == false)
             return;
