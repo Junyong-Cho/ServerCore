@@ -2,7 +2,7 @@
 {
     public struct SendBufferWrapper
     {
-        public SendBufferWrapper(SendBuffer buffer, ArraySegment<byte> segment)
+        internal SendBufferWrapper(SendBuffer buffer, ArraySegment<byte> segment)
         {
             Buffer = buffer;
             Segment = segment;
