@@ -75,8 +75,8 @@ public abstract partial class Session
             return;
         try
         {
-            _socket!.LingerState = closeOption;
-            _socket.Close();
+            _socket?.LingerState = closeOption;
+            _socket?.Close();
         }
         catch (Exception e)
         {
@@ -93,16 +93,31 @@ public abstract partial class Session
         Disconnect();
     }
 
-    protected virtual void Hold()
+    protected virtual bool TryHold()
     {
-        Interlocked.Increment(ref _refCount);
+        while (true)
+        {
+            int refCount = _refCount;
+
+            if (refCount == 0)
+                return false;
+
+            int prev = Interlocked.CompareExchange(ref _refCount, refCount + 1, refCount);
+
+            if (prev == 0)
+                return false;
+
+            if (prev == refCount)
+                return true;
+        }
     }
+
     protected virtual void Release()
     {
         if (Interlocked.Decrement(ref _refCount) == 0 && Interlocked.Exchange(ref _isReleased, 1) == 0)
         {
             while (_refBufferQueue.TryDequeue(out SendBuffer? buffer) == true)
-                buffer.DecreaseReference();
+                buffer.Release();
 
             //try
             //{
