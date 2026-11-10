@@ -38,7 +38,9 @@ public abstract partial class Session
     protected abstract void OnConnect();
     protected abstract void OnDisconnect();
 
-    public Session(int recvBufferSize = 1<<16, int pendingListSize = 1024)
+    internal Action? ReturnPool;
+
+    public Session(int recvBufferSize = 1 << 16, int pendingListSize = 1024)
     {
         _recvBuffer = new(recvBufferSize);
 
@@ -146,10 +148,14 @@ public abstract partial class Session
             {
                 OnDisconnect();
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine("OnDisconnect Error");
                 Console.WriteLine(e);
+            }
+            finally
+            {
+                ReturnPool?.Invoke();
             }
         }
     }

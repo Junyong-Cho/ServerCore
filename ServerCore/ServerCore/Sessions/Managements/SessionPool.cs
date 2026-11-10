@@ -2,18 +2,27 @@
 
 namespace ServerCore.Sessions.Managements;
 
-public static class SessionPool<S> where S : Session, new()
+internal static class SessionPool<S> where S : Session, new()
 {
     static ConcurrentStack<S> _sessionPool = new();
 
-    public static S Rent(Action<S>? sessionInitializer)
+    internal static S Rent(Action<S>? sessionInitializer)
     {
         if (_sessionPool.TryPop(out S? session) == false)
         {
             session = new();
+            session.ReturnPool = () => Return(session);
         }
 
-        sessionInitializer?.Invoke(session);
+        try
+        {
+            sessionInitializer?.Invoke(session);
+        }
+        catch
+        {
+            Return(session);
+            throw;
+        }
 
         return session;
     }
