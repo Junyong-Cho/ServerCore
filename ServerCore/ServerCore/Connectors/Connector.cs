@@ -42,7 +42,7 @@ public abstract class Connector<S> where S : Session, new()
         if (args.SocketError == SocketError.Success)
         {
             S session = new();
-            session.Start(args.ConnectSocket!);
+            //session.Start(args.ConnectSocket!);
 
             OnConnect(session);
         }

@@ -8,7 +8,37 @@ namespace ServerCore.Sessions;
 
 partial class Session
 {
-    protected virtual void Send(string data)
+    internal virtual void Send(SendBufferWrapper wrapper, int version)
+    {
+        if (TryHold() == false)
+            return;
+        try
+        {
+            lock (_lock)
+            {
+                if (version != _version)
+                    return;
+            }
+            Send(wrapper);
+        }
+        finally
+        {
+            Release();
+        }
+    }
+
+    protected void Send(ReadOnlySpan<byte> data)
+    {
+        ArraySegment<byte> segment = SendBufferHandler.Open(data.Length);
+
+        data.CopyTo(segment);
+
+        SendBufferWrapper wrapper = SendBufferHandler.Close(data.Length);
+
+        Send(wrapper);
+    }
+
+    protected void Send(string data)
     {
         ArraySegment<byte> segment = SendBufferHandler.Open(Encoding.UTF8.GetMaxByteCount(data.Length));
 
@@ -19,15 +49,18 @@ partial class Session
         Send(wrapper);
     }
 
-    protected virtual void Send<S>(S data) where S : struct
+    protected void Send<S>(S data) where S : struct
     {
-        int dataSize = Unsafe.SizeOf<S>();
+        int size = Unsafe.SizeOf<S>();
 
-        ArraySegment<byte> segment = SendBufferHandler.Open(dataSize);
-
+        ArraySegment<byte> segment = SendBufferHandler.Open(size);
+#if NET10_0
+        MemoryMarshal.Write(segment, in data);
+#elif NETSTANDARD2_1
         MemoryMarshal.Write(segment, ref data);
-
-        SendBufferWrapper wrapper = SendBufferHandler.Close(dataSize);
+#endif
+        
+        SendBufferWrapper wrapper = SendBufferHandler.Close(size);
 
         Send(wrapper);
     }

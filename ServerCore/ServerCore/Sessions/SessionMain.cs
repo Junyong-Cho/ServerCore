@@ -1,18 +1,21 @@
 using ServerCore.Buffers;
 using ServerCore.Sessions.Collections;
+using ServerCore.Sessions.Managements;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 
 namespace ServerCore.Sessions;
 
-public abstract partial class Session 
+public abstract partial class Session
 {
     protected volatile int _isDisconnected = 0;
     protected volatile int _refCount = 1;
     protected volatile int _isReleased = 0;
     protected volatile bool _isSending = false;
-    protected volatile int _version = 0;
+    volatile int _version = 0;
+
+    public int Version => _version;
 
     public bool Disconnected => _isDisconnected == 1;
 
@@ -53,29 +56,51 @@ public abstract partial class Session
         _sendArgs.Completed += OnSendComplete;
     }
 
-    public virtual void Start(Socket socket)
+    internal virtual void Start(Socket socket, out int version, Action? sessionManagerInit = null)
     {
         lock (_lock)
         {
-            _version++;
             Reset();
             _socket = socket;
 
             if (TryHold() == false)
                 throw new InvalidOperationException("세션 초기화 작업 실패");
+
+            version = ++_version;
         }
 
         try
         {
+            sessionManagerInit?.Invoke();
             _remote = _socket.RemoteEndPoint!;
             OnConnect();
             RegisterRecv();
         }
-        catch(Exception e)
+        catch (Exception e)
         {
             Console.WriteLine("OnConnect Error");
             LogExceptionAndDisconnect(e);
+        }
+        finally
+        {
+            Release();
+        }
+    }
+
+    internal virtual void Disconnect(int version)
+    {
+        if (TryHold() == false)
             return;
+
+        try
+        {
+            lock (_lock)
+            {
+                if (_version != version)
+                    return;
+            }
+
+            Disconnect();
         }
         finally
         {
@@ -102,7 +127,7 @@ public abstract partial class Session
 
     protected virtual void LogExceptionAndDisconnect(object? log)
     {
-        if (_isDisconnected == 0 && log !=null)
+        if (_isDisconnected == 0 && log != null)
             Console.WriteLine(log);
         Disconnect();
     }

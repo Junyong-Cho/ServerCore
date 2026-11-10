@@ -24,6 +24,7 @@ public abstract class SocketListener<S> where S : Session, new()
     public abstract void Quit(object log);
     protected abstract void OnStart();
     protected abstract void OnRegister();
+    protected abstract void SessionManagerInitializer(SessionManager<S> manager);
 
     public virtual void Start(int argsCount = 10, int listenCount = 1000)
     {
@@ -70,16 +71,22 @@ public abstract class SocketListener<S> where S : Session, new()
 
     protected virtual void OnAccpComplete(object? sender, SocketAsyncEventArgs args)
     {
-        if (args.SocketError == SocketError.Success)
+        try
         {
-            S session = SessionPool<S>.Rent(_sessionInitializer)!;
-
-            session.Start(args.AcceptSocket!);
+            if (args.SocketError == SocketError.Success)
+            {
+                SessionManager<S> manager = new(args.AcceptSocket!, SessionManagerInitializer, _sessionInitializer);
+            }
         }
-
-        if (sender == null)
-            return;
-
-        RegisterAccp(args);
+        catch(Exception e)
+        {
+            Console.WriteLine(e);
+            args.AcceptSocket?.Dispose();
+        }
+        finally
+        {
+            if (sender != null)
+                RegisterAccp(args);
+        }
     }
 }
