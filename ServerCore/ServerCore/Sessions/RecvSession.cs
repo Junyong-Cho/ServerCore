@@ -101,7 +101,7 @@ partial class Session
         }
     }
 
-    protected string GetDate(ArraySegment<byte> segment)
+    protected string GetData(ArraySegment<byte> segment)
     {
         return Encoding.UTF8.GetString(segment);
     }
