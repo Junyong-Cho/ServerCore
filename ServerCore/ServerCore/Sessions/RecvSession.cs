@@ -1,4 +1,5 @@
 using System.Net.Sockets;
+using System.Text;
 
 namespace ServerCore.Sessions;
 
@@ -98,5 +99,10 @@ partial class Session
             if (sender != null)
                 Release();
         }
+    }
+
+    protected string GetDate(ArraySegment<byte> segment)
+    {
+        return Encoding.UTF8.GetString(segment);
     }
 }
