@@ -15,6 +15,9 @@ public abstract partial class Session
     protected volatile bool _isSending = false;
     volatile int _version = 0;
 
+    Action? _onConnectCallback;
+    Action? _onDisconnectCallback;
+
     public int Version => _version;
 
     public bool Disconnected => _isDisconnected == 1;
@@ -38,8 +41,16 @@ public abstract partial class Session
 
     protected EndPoint? _remote;
     protected abstract int OnRecv(ArraySegment<byte> segment);
-    protected abstract void OnConnect();
-    protected abstract void OnDisconnect();
+
+    protected virtual void OnConnect()
+    {
+        Volatile.Read(ref _onConnectCallback)?.Invoke();
+    }
+
+    protected virtual void OnDisconnect()
+    {
+        Volatile.Read(ref _onDisconnectCallback)?.Invoke();
+    }
 
     internal Action? ReturnPool;
 
@@ -80,6 +91,48 @@ public abstract partial class Session
         {
             Console.WriteLine("OnConnect Error");
             LogExceptionAndDisconnect(e);
+        }
+        finally
+        {
+            Release();
+        }
+    }
+
+    internal void RegisterOnConnect(Action? callback, int version)
+    {
+        if (TryHold() == false)
+            return;
+
+        try
+        {
+            lock (_lock)
+            {
+                if (_version != version)
+                    return;
+
+                _onConnectCallback = callback;
+            }
+        }
+        finally
+        {
+            Release();
+        }
+    }
+
+    internal void RegisterOnDisconnect(Action? callback, int version)
+    {
+        if (TryHold() == false)
+            return;
+
+        try
+        {
+            lock (_lock)
+            {
+                if (_version != version)
+                    return;
+
+                _onDisconnectCallback = callback;
+            }
         }
         finally
         {
@@ -180,6 +233,10 @@ public abstract partial class Session
             }
             finally
             {
+                // [검토용 제안] 종료 콜백 실행 후, 풀에 반납하기 전에 두 콜백을 비움.
+                // 다음 연결로 콜백이 넘어가거나 풀에서 이전 사용자를 계속 참조하지 않도록 함.
+                // _onConnectCallback = null;
+                // _onDisconnectCallback = null;
                 ReturnPool?.Invoke();
             }
         }

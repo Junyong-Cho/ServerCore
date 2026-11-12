@@ -12,7 +12,7 @@ namespace ServerCore.Sessions.Managements
         readonly int _version;
         readonly Action<SessionManager<S>>? _managerInitializer;
 
-        public SessionManager(Socket socket, Action<SessionManager<S>>? managerInitializer, Action<S>? sessionInitializer = null)
+        public SessionManager(Socket socket, Action<SessionManager<S>>? managerInitializer = null, Action<S>? sessionInitializer = null)
         {
             _managerInitializer = managerInitializer;
             _session = SessionPool<S>.Rent(sessionInitializer);
@@ -22,6 +22,15 @@ namespace ServerCore.Sessions.Managements
         void Init()
         {
             _managerInitializer?.Invoke(this);
+        }
+         public void RegisterOnConnect(Action? callback)
+        {
+            _session.RegisterOnConnect(callback, _version);
+        }
+
+        public void RegisterOnDisconnect(Action? callback)
+        {
+            _session.RegisterOnDisconnect(callback, _version);
         }
 
         public void Send(ReadOnlySpan<byte> data)
