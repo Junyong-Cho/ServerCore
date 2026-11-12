@@ -12,7 +12,7 @@ namespace ServerCore.Sessions.Managements
         readonly int _version;
         readonly Action<SessionManager<S>>? _managerInitializer;
 
-        internal SessionManager(Socket socket, Action<SessionManager<S>>? managerInitializer, Action<S>? sessionInitializer = null)
+        public SessionManager(Socket socket, Action<SessionManager<S>>? managerInitializer, Action<S>? sessionInitializer = null)
         {
             _managerInitializer = managerInitializer;
             _session = SessionPool<S>.Rent(sessionInitializer);
