@@ -7,6 +7,7 @@ public class SendBuffer
     byte[] _buffer;
 
     int _usedSize;
+    int _reservedSize = -1;
     int _refCount;
     int _disposed;
     
@@ -22,14 +23,22 @@ public class SendBuffer
 
     public ArraySegment<byte> Open(int reserveSize)
     {
+        _reservedSize = reserveSize;
         return new(_buffer, _usedSize, reserveSize);
     }
 
     public ArraySegment<byte> Close(int usedSize)
     {
+        if (_reservedSize < 0)
+            throw new InvalidOperationException("Open must be called before Close.");
+
+        if (usedSize > _reservedSize)
+            throw new ArgumentOutOfRangeException(nameof(usedSize), "Used size exceeds the reserved size.");
+
         ArraySegment<byte> segment = new(_buffer, _usedSize, usedSize);
 
         _usedSize += usedSize;
+        _reservedSize = -1;
 
         return segment;
     }
@@ -56,6 +65,7 @@ public class SendBuffer
     internal void Reset()
     {
         _usedSize = 0;
+        _reservedSize = -1;
         _refCount = 1;
         _disposed = 0;
     }

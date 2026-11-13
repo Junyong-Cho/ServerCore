@@ -26,9 +26,6 @@ public static class SendBufferHandler
     {
         SendBuffer buffer = _current.Value!;
 
-        if (buffer.FreeSize < usedSize)
-            throw new Exception("Need Open Before Close");
-
         return new(buffer, buffer.Close(usedSize));
     }
 }
