@@ -98,6 +98,29 @@ public abstract partial class Session
         }
     }
 
+    internal bool TryConfigureSession<TSession, TState>(int version, TState state, Func<TSession, TState, bool> configure) where TSession : Session
+    {
+        if (TryHold() == false)
+            return false;
+
+        try
+        {
+            lock (_lock)
+            {
+                if (_version != version || _isDisconnected == 1)
+                    return false;
+
+                bool res = configure((TSession)this, state);
+
+                return res;
+            }
+        }
+        finally
+        {
+            Release();
+        }
+    }
+
     internal void RegisterOnConnect(Action? callback, int version)
     {
         if (TryHold() == false)
@@ -233,10 +256,8 @@ public abstract partial class Session
             }
             finally
             {
-                // [검토용 제안] 종료 콜백 실행 후, 풀에 반납하기 전에 두 콜백을 비움.
-                // 다음 연결로 콜백이 넘어가거나 풀에서 이전 사용자를 계속 참조하지 않도록 함.
-                // _onConnectCallback = null;
-                // _onDisconnectCallback = null;
+                _onConnectCallback = null;
+                _onDisconnectCallback = null;
                 ReturnPool?.Invoke();
             }
         }

@@ -23,7 +23,7 @@ namespace ServerCore.Sessions.Managements
         {
             _managerInitializer?.Invoke(this);
         }
-         public void RegisterOnConnect(Action? callback)
+        public void RegisterOnConnect(Action? callback)
         {
             _session.RegisterOnConnect(callback, _version);
         }
@@ -31,6 +31,14 @@ namespace ServerCore.Sessions.Managements
         public void RegisterOnDisconnect(Action? callback)
         {
             _session.RegisterOnDisconnect(callback, _version);
+        }
+
+        public bool TryConfigureSession<TState>(TState state, Func<S, TState, bool> configure)
+        {
+            if (configure == null)
+                throw new ArgumentNullException(nameof(configure));
+
+            return _session.TryConfigureSession(_version, state, configure);
         }
 
         public void Send(ReadOnlySpan<byte> data)
