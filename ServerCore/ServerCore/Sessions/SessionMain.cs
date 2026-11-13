@@ -1,6 +1,5 @@
 using ServerCore.Buffers;
 using ServerCore.Sessions.Collections;
-using ServerCore.Sessions.Managements;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
@@ -56,6 +55,11 @@ public abstract partial class Session
 
     public Session(int recvBufferSize = 1 << 16, int pendingListSize = 1024)
     {
+        if (recvBufferSize <= 0)
+            throw new ArgumentOutOfRangeException(nameof(recvBufferSize), "Size must be greater than zero");
+        if (pendingListSize <= 0)
+            throw new ArgumentOutOfRangeException(nameof(pendingListSize), "Size must be greater than zero");
+
         _recvBuffer = new(recvBufferSize);
 
         _sendingList = new(pendingListSize);

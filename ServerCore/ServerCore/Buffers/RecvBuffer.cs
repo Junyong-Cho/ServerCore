@@ -21,6 +21,9 @@ public class RecvBuffer
 
     public bool OnRead(int readSize)
     {
+        if (readSize < 0)
+            throw new ArgumentOutOfRangeException(nameof(readSize), "Size must be non-negative");
+
         if (DataSize < readSize)
             return false;
 
@@ -30,6 +33,9 @@ public class RecvBuffer
 
     public bool OnWrite(int writeSize)
     {
+        if (writeSize < 0)
+            throw new ArgumentOutOfRangeException(nameof(writeSize), "Size must be non-negative");
+
         if (FreeSize < writeSize)
             return false;
 

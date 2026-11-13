@@ -10,7 +10,7 @@ public class SendBuffer
     int _reservedSize = -1;
     int _refCount;
     int _disposed;
-    
+
     public int FreeSize => _buffer.Length - _usedSize;
 
     public SendBuffer()
@@ -23,6 +23,12 @@ public class SendBuffer
 
     public ArraySegment<byte> Open(int reserveSize)
     {
+        if (reserveSize < 0)
+            throw new ArgumentOutOfRangeException(nameof(reserveSize), "Size must be non-negative.");
+
+        if (reserveSize > FreeSize)
+            throw new ArgumentOutOfRangeException(nameof(reserveSize), "Requested size exceeds the remaining buffer space.");
+
         _reservedSize = reserveSize;
         return new(_buffer, _usedSize, reserveSize);
     }
@@ -31,6 +37,9 @@ public class SendBuffer
     {
         if (_reservedSize < 0)
             throw new InvalidOperationException("Open must be called before Close.");
+
+        if (usedSize < 0)
+            throw new ArgumentOutOfRangeException(nameof(usedSize), "Size must be non-negative.");
 
         if (usedSize > _reservedSize)
             throw new ArgumentOutOfRangeException(nameof(usedSize), "Used size exceeds the reserved size.");

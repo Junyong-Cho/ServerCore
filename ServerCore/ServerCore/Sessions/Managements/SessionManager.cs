@@ -14,6 +14,8 @@ namespace ServerCore.Sessions.Managements
 
         public SessionManager(Socket socket, Action<SessionManager<S>>? managerInitializer = null, Action<S>? sessionInitializer = null)
         {
+            if (socket == null)
+                throw new ArgumentNullException(nameof(socket));
             _managerInitializer = managerInitializer;
             _session = SessionPool<S>.Rent(sessionInitializer);
             _session.Start(socket, out _version, Init);
@@ -54,6 +56,8 @@ namespace ServerCore.Sessions.Managements
 
         public void Send(string data)
         {
+            if (data == null)
+                throw new ArgumentNullException(nameof(data));
             ArraySegment<byte> segment = SendBufferHandler.Open(Encoding.UTF8.GetMaxByteCount(data.Length));
 
             int len = Encoding.UTF8.GetBytes(data, segment);

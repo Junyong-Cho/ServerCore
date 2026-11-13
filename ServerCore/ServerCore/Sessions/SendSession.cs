@@ -59,7 +59,7 @@ partial class Session
 #elif NETSTANDARD2_1
         MemoryMarshal.Write(segment, ref data);
 #endif
-        
+
         SendBufferWrapper wrapper = SendBufferHandler.Close(size);
 
         Send(wrapper);

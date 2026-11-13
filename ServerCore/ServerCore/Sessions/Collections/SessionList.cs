@@ -9,11 +9,30 @@ public class SessionList<T> : IList<T> where T : struct
     int count;
     public SessionList(int bufferSize)
     {
+        if (bufferSize <= 0)
+            throw new ArgumentOutOfRangeException(nameof(bufferSize), "Size must be greater than zero.");
+
         _list = new T[bufferSize];
         count = 0;
     }
 
-    public T this[int index] { get => _list[index]; set => _list[index] = value; }
+    public T this[int index]
+    {
+        get
+        {
+            if (index < 0 || index >= count)
+                throw new ArgumentOutOfRangeException(nameof(index));
+
+            return _list[index];
+        }
+        set
+        {
+            if (index < 0 || index >= count)
+                throw new ArgumentOutOfRangeException(nameof(index));
+
+            _list[index] = value;
+        }
+    }
 
     public int Count => count;
 

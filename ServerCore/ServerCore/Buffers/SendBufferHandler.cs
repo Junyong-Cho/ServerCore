@@ -8,13 +8,16 @@ public static class SendBufferHandler
 
     public static ArraySegment<byte> Open(int reserveSize)
     {
+        if (reserveSize < 0)
+            throw new ArgumentOutOfRangeException(nameof(reserveSize), "Size must be non-negative.");
+
+        if (reserveSize > BufferSize)
+            throw new ArgumentOutOfRangeException(nameof(reserveSize), "Requested size exceeds the buffer capacity.");
+
         SendBuffer buffer = _current.Value!;
 
         if (buffer.FreeSize < reserveSize)
         {
-            if (BufferSize < reserveSize)
-                throw new Exception("ReserveSize Over Than BufferSize");
-
             buffer.Dispose();
             _current.Value = buffer = SendBufferPool.Rent();
         }

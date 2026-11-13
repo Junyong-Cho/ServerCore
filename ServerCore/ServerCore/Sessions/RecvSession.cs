@@ -34,7 +34,7 @@ partial class Session
 
                 OnRecvComplete(null, _recvArgs);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 LogExceptionAndDisconnect(e);
                 Release();

@@ -14,6 +14,9 @@ public abstract class SocketListener<S> where S : Session, new()
 
     public SocketListener(EndPoint endPoint, Action<S>? sessioninitializer = null)
     {
+        if (endPoint == null)
+            throw new ArgumentNullException(nameof(endPoint));
+
         _listener = new(endPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 
         _listener.Bind(endPoint);
@@ -28,6 +31,11 @@ public abstract class SocketListener<S> where S : Session, new()
 
     public virtual void Start(int argsCount = 10, int listenCount = 1000)
     {
+        if (argsCount <= 0)
+            throw new ArgumentOutOfRangeException(nameof(argsCount), "Size must be greater than zero");
+        if (listenCount <= 0)
+            throw new ArgumentOutOfRangeException(nameof(listenCount), "Size must be greater than zero");
+
         OnStart();
 
         _argsCount = argsCount;
@@ -78,7 +86,7 @@ public abstract class SocketListener<S> where S : Session, new()
                 SessionManager<S> manager = new(args.AcceptSocket!, SessionManagerInitializer, _sessionInitializer);
             }
         }
-        catch(Exception e)
+        catch (Exception e)
         {
             Console.WriteLine(e);
             args.AcceptSocket?.Dispose();
