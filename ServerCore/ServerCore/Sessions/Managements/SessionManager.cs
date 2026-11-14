@@ -11,11 +11,16 @@ namespace ServerCore.Sessions.Managements
         readonly S _session;
         readonly int _version;
         readonly Action<SessionManager<S>>? _managerInitializer;
+        readonly long _sessionId;
+        public long SessionId => _sessionId;
 
         public SessionManager(Socket socket, Action<SessionManager<S>>? managerInitializer = null, Action<S>? sessionInitializer = null)
         {
             if (socket == null)
                 throw new ArgumentNullException(nameof(socket));
+
+            _sessionId = SessionIdGenerator.Next();
+
             _managerInitializer = managerInitializer;
             _session = SessionPool<S>.Rent(sessionInitializer);
             _session.Start(socket, out _version, Init);
