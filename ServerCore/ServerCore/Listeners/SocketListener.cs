@@ -9,7 +9,7 @@ public abstract class SocketListener<S> where S : Session, new()
 {
     protected Socket _listener;
     protected int _argsCount;
-    protected bool _shutdown = false;
+    protected volatile int _shutdown = 0;
     protected Action<S>? _sessionInitializer;
 
     public SocketListener(EndPoint endPoint, Action<S>? sessioninitializer = null)
@@ -24,7 +24,17 @@ public abstract class SocketListener<S> where S : Session, new()
         _sessionInitializer = sessioninitializer;
     }
 
-    public abstract void Quit(object log);
+    public virtual void Quit(object log)
+    {
+        int shutdown = Interlocked.Exchange(ref _shutdown, 1);
+
+        if(shutdown == 0)
+        {
+            Console.WriteLine(log);
+            _listener.Dispose();
+        }
+    }
+
     protected virtual void OnStart() { }
     protected virtual void OnRegister() { }
     protected abstract void SessionManagerInitializer(SessionManager<S> manager);
@@ -56,7 +66,7 @@ public abstract class SocketListener<S> where S : Session, new()
 
     protected virtual void RegisterAccp(SocketAsyncEventArgs args)
     {
-        while (_shutdown == false)
+        while (_shutdown == 0)
         {
             args.AcceptSocket = null;
 
