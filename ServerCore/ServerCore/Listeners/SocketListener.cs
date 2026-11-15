@@ -25,8 +25,8 @@ public abstract class SocketListener<S> where S : Session, new()
     }
 
     public abstract void Quit(object log);
-    protected abstract void OnStart();
-    protected abstract void OnRegister();
+    protected virtual void OnStart() { }
+    protected virtual void OnRegister() { }
     protected abstract void SessionManagerInitializer(SessionManager<S> manager);
 
     public virtual void Start(int argsCount = 10, int listenCount = 1000)
