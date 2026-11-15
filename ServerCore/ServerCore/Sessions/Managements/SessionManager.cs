@@ -6,36 +6,33 @@ using System.Text;
 
 namespace ServerCore.Sessions.Managements
 {
-    public class SessionManager<S> where S : Session, new()
+    public interface ISessionManager { }
+
+    public class SessionManager<S> : ISessionManager where S : Session, new()
     {
         readonly S _session;
         readonly int _version;
-        readonly Action<SessionManager<S>>? _managerInitializer;
         readonly long _sessionId;
         public long SessionId => _sessionId;
 
-        public SessionManager(Socket socket, Action<SessionManager<S>>? managerInitializer = null, Action<S>? sessionInitializer = null)
+        public SessionManager(Socket socket, Action<ISessionManager>? managerInitializer = null, Action<S>? sessionInitializer = null)
         {
             if (socket == null)
                 throw new ArgumentNullException(nameof(socket));
 
             _sessionId = SessionIdGenerator.Next();
 
-            _managerInitializer = managerInitializer;
             _session = SessionPool<S>.Rent(sessionInitializer);
-            _session.Start(socket, out _version, Init);
+
+            _session.Start(socket, out _version, managerInitializer, this);
         }
 
-        void Init()
-        {
-            _managerInitializer?.Invoke(this);
-        }
-        public void RegisterOnConnect(Action? callback)
+        public void RegisterOnConnect(Action<ISessionManager?>? callback)
         {
             _session.RegisterOnConnect(callback, _version);
         }
 
-        public void RegisterOnDisconnect(Action? callback)
+        public void RegisterOnDisconnect(Action<ISessionManager?>? callback)
         {
             _session.RegisterOnDisconnect(callback, _version);
         }

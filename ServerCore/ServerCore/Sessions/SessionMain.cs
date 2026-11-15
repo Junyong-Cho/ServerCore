@@ -1,5 +1,6 @@
 using ServerCore.Buffers;
 using ServerCore.Sessions.Collections;
+using ServerCore.Sessions.Managements;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
@@ -14,8 +15,9 @@ public abstract partial class Session
     protected volatile bool _isSending = false;
     volatile int _version = 0;
 
-    Action? _onConnectCallback;
-    Action? _onDisconnectCallback;
+    ISessionManager? _sessionManager;
+    Action<ISessionManager>? _onConnectCallback;
+    Action<ISessionManager>? _onDisconnectCallback;
 
     public int Version => _version;
 
@@ -43,12 +45,12 @@ public abstract partial class Session
 
     protected virtual void OnConnect()
     {
-        Volatile.Read(ref _onConnectCallback)?.Invoke();
+        _onConnectCallback?.Invoke(_sessionManager!);
     }
 
     protected virtual void OnDisconnect()
     {
-        Volatile.Read(ref _onDisconnectCallback)?.Invoke();
+        _onDisconnectCallback?.Invoke(_sessionManager!);
     }
 
     internal Action? ReturnPool;
@@ -71,7 +73,7 @@ public abstract partial class Session
         _sendArgs.Completed += OnSendComplete;
     }
 
-    internal virtual void Start(Socket socket, out int version, Action? sessionManagerInit = null)
+    internal virtual void Start(Socket socket, out int version, Action<ISessionManager>? sessionManagerInit = null, ISessionManager? sessionManager = null)
     {
         lock (_lock)
         {
@@ -86,7 +88,9 @@ public abstract partial class Session
 
         try
         {
-            sessionManagerInit?.Invoke();
+            _sessionManager = sessionManager;
+
+            sessionManagerInit?.Invoke(_sessionManager!);
             _remote = _socket.RemoteEndPoint!;
             OnConnect();
             RegisterRecv();
@@ -125,7 +129,7 @@ public abstract partial class Session
         }
     }
 
-    internal void RegisterOnConnect(Action? callback, int version)
+    internal void RegisterOnConnect(Action<ISessionManager?>? callback, int version)
     {
         if (TryHold() == false)
             return;
@@ -146,7 +150,7 @@ public abstract partial class Session
         }
     }
 
-    internal void RegisterOnDisconnect(Action? callback, int version)
+    internal void RegisterOnDisconnect(Action<ISessionManager?>? callback, int version)
     {
         if (TryHold() == false)
             return;
@@ -260,6 +264,7 @@ public abstract partial class Session
             }
             finally
             {
+                _sessionManager = null;
                 _onConnectCallback = null;
                 _onDisconnectCallback = null;
                 ReturnPool?.Invoke();

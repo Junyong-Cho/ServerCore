@@ -28,7 +28,7 @@ public abstract class SocketListener<S> where S : Session, new()
     {
         int shutdown = Interlocked.Exchange(ref _shutdown, 1);
 
-        if(shutdown == 0)
+        if (shutdown == 0)
         {
             Console.WriteLine(log);
             _listener.Dispose();
@@ -37,7 +37,7 @@ public abstract class SocketListener<S> where S : Session, new()
 
     protected virtual void OnStart() { }
     protected virtual void OnRegister() { }
-    protected abstract void SessionManagerInitializer(SessionManager<S> manager);
+    protected abstract void SessionManagerInitializer(ISessionManager? manager);
 
     public virtual void Start(int argsCount = 10, int listenCount = 1000)
     {
