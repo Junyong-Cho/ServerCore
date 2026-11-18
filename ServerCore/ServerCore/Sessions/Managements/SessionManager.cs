@@ -69,9 +69,14 @@ namespace ServerCore.Sessions.Managements
             Send(wrapper);
         }
 
-        public void Send<ST>(ST data) where ST : struct
+        public void Send<ST>(ST data) where ST : unmanaged
         {
-            int size = Unsafe.SizeOf<ST>();
+            int size;
+
+            unsafe
+            {
+                size = sizeof(ST);
+            }
 
             ArraySegment<byte> segment = SendBufferHandler.Open(size);
 

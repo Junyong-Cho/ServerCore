@@ -49,9 +49,14 @@ partial class Session
         Send(wrapper);
     }
 
-    protected void Send<S>(S data) where S : struct
+    protected void Send<S>(S data) where S : unmanaged
     {
-        int size = Unsafe.SizeOf<S>();
+        int size;
+
+        unsafe
+        {
+            size = sizeof(S);
+        }
 
         ArraySegment<byte> segment = SendBufferHandler.Open(size);
 #if NET10_0
